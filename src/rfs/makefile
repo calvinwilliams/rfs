@@ -8,10 +8,11 @@
 ###### 源文件配置区
 #@ c_FILE
 c_FILE		=	\
+			IDL_rfs_conf.dsc.c \
 			main.c \
 			monitor.c \
 			worker.c \
-			IDL_rfs_conf.dsc.c \
+			proto.c \
 
 ###### 目标文件、安装目录配置区
 include makeinstall

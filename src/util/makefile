@@ -10,6 +10,7 @@
 c_FILE		=	\
 			LOGC.c \
 			fasterjson.c \
+			comm.c \
 
 ###### 目标文件、安装目录配置区
 include makeinstall
@@ -18,6 +19,7 @@ LIBINST		=	$(_LIBINST)
 HDER		= \
 			LOGC.h \
 			fasterjson.h \
+			rfs_util.h \
 
 HDERINST	=	$(_HDERINST)
 

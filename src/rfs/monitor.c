@@ -5,6 +5,12 @@ int monitor( rfs_conf *p_rfs_conf )
 	int			listen_sock ;
 	struct sockaddr_in	listen_addr ;
 	
+	socklen_t		accepted_addr_len ;
+	struct sockaddr_in	accepted_addr ;
+	int			accepted_sock ;
+	
+	pid_t			pid ;
+	
 	int			nret = 0 ;
 	
 	SetLogcFile( "%s/log/rfs_monitor.log" , getenv("HOME") );
@@ -13,7 +19,7 @@ int monitor( rfs_conf *p_rfs_conf )
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
 	{
-		ERRORLOGC( "socket failed , errno[%d]" , errno )
+		FATALLOGC( "socket failed , errno[%d]" , errno )
 		return -1;
 	}
 	
@@ -27,14 +33,14 @@ int monitor( rfs_conf *p_rfs_conf )
 	nret = bind( listen_sock , (struct sockaddr *) & (listen_addr) , sizeof(struct sockaddr) ) ;
 	if( nret == -1 )
 	{
-		ERRORLOGC( "bind[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock , errno )
+		FATALLOGC( "bind[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock , errno )
 		return -1;
 	}
 	
 	nret = listen( listen_sock , 10240 ) ;
 	if( nret == -1 )
 	{
-		ERRORLOGC( "listen[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock , errno )
+		FATALLOGC( "listen[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock , errno )
 		return -1;
 	}
 	else
@@ -42,18 +48,37 @@ int monitor( rfs_conf *p_rfs_conf )
 		INFOLOGC( "listen[%s:%d][%d] ok" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock )
 	}
 	
+	signal( SIGCLD , NULL );
+	signal( SIGCHLD , NULL );
 	
+	while(1)
+	{
+		accepted_addr_len = sizeof(struct sockaddr) ;
+		accepted_sock = accept( listen_sock , (struct sockaddr *) & accepted_addr , & accepted_addr_len ) ;
+		if( accepted_sock == -1 )
+		{
+			FATALLOGC( "accept failed , errno[%d]" , errno )
+			return -1;
+		}
+		else
+		{
+			INFOLOGC( "accept ok" )
+		}
+		
+		pid = fork() ;
+		if( pid == -1 )
+		{
+			FATALLOGC( "fork failed , errno[%d]" , errno )
+			return -1;
+		}
+		else if( pid == 0 )
+		{
+			exit( -worker( accepted_sock , & accepted_addr ) );
+		}
+	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	close( listen_sock );
+	INFOLOGC( "close listen[%s:%d][%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock )
 	
 	return 0;
 }
