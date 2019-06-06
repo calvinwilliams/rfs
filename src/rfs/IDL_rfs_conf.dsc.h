@@ -97,6 +97,7 @@ extern "C" {
 
 typedef struct
 {
+	char	root[ 256 + 1 ] ;
 	struct
 	{
 		char	id[ 32 + 1 ] ;

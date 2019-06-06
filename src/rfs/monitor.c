@@ -73,7 +73,7 @@ int monitor( rfs_conf *p_rfs_conf )
 		}
 		else if( pid == 0 )
 		{
-			exit( -worker( accepted_sock , & accepted_addr ) );
+			exit( -worker( p_rfs_conf , accepted_sock , & accepted_addr ) );
 		}
 	}
 	

@@ -12,15 +12,15 @@ extern "C" {
 struct RemoteFileSession
 {
 	char		pathfilename[ (1<<16) + 1 ] ;
-	uint16_t	pathfilename_len ;
-	uint32_t	flags ;
-	uint32_t	mode ;
+	int		pathfilename_len ;
+	int		flags ;
+	int		mode ;
 	
-	uint32_t	fd ;
+	int		fd ;
 } ;
 
 int monitor( rfs_conf *p_rfs_conf );
-int worker( int accepted_sock , struct sockaddr_in *p_accepted_addr );
+int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_accepted_addr );
 
 /*
  COMMAND : ropen
@@ -40,8 +40,8 @@ RESPONSE : |ret:INT4|errno:INT4|
 
  COMMAND : rread
  VERSION : 1
- REQUEST : |'R':CHAR|'1':CHAR|reserved:STR2|fd:INT4|buf:L4VSTR|
-RESPONSE : |read_len:INT4|errno:INT4|
+ REQUEST : |'R':CHAR|'1':CHAR|reserved:STR2|fd:INT4|read_len:INT4|
+RESPONSE : |buf:L4VSTR|errno:INT4|
 
  COMMAND : rwrite
  VERSION : 1

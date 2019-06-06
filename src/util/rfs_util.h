@@ -24,6 +24,8 @@ extern "C" {
 #define RFS_ERROR_ALLOC			-11
 #define RFS_ERROR_POLL			-16
 
+#define RFS_ERROR_INTERNAL		-91
+
 /* time */
 
 #define DEF_TIMEVAL_FOR_DIFF \
@@ -68,8 +70,8 @@ extern "C" {
 #define RFS_ERROR_CLOSED		-46
 #define RFS_INFO_CLOSED			46
 
-int RFSSendInt4( int sock , uint32_t h4 , struct timeval *p_elapse );
-int RFSReceiveInt4( int sock , uint32_t *p_h4 , struct timeval *p_elapse );
+int RFSSendInt4( int sock , int h4 , struct timeval *p_elapse );
+int RFSReceiveInt4( int sock , int *p_h4 , struct timeval *p_elapse );
 
 int RFSSendChar( int sock , char ch , struct timeval *p_elapse );
 int RFSReceiveChar( int sock , char *p_ch , struct timeval *p_elapse );
@@ -77,11 +79,11 @@ int RFSReceiveChar( int sock , char *p_ch , struct timeval *p_elapse );
 int RFSSendString( int sock , char *buf , uint64_t data_len , struct timeval *p_elapse );
 int RFSReceiveString( int sock , char *buf , uint64_t data_len , struct timeval *p_elapse );
 
-int RFSSendL2VString( int sock , char *buf , uint16_t data_len , struct timeval *p_elapse );
-int RFSReceiveL2VString( int sock , char *buf , uint16_t *p_data_len , struct timeval *p_elapse );
+int RFSSendL2VString( int sock , char *buf , int data_len , struct timeval *p_elapse );
+int RFSReceiveL2VString( int sock , char *buf , int *p_data_len , struct timeval *p_elapse );
 
-int RFSSendL4VString( int sock , char *buf , uint32_t data_len , struct timeval *p_elapse );
-int RFSReceiveL4VString_DUP( int sock , char **s_buf_ptr , uint32_t *p_data_len , struct timeval *p_elapse );
+int RFSSendL4VString( int sock , char *buf , int data_len , struct timeval *p_elapse );
+int RFSReceiveL4VString_DUP( int sock , char **s_buf_ptr , int *p_data_len , struct timeval *p_elapse );
 
 
 

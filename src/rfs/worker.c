@@ -1,6 +1,6 @@
 #include "in.h"
 
-int worker( int accepted_sock , struct sockaddr_in *p_accepted_addr )
+int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_accepted_addr )
 {
 	struct timeval			elapse ;
 	char				command ;
@@ -10,6 +10,11 @@ int worker( int accepted_sock , struct sockaddr_in *p_accepted_addr )
 	struct RemoteFileSession	session ;
 	
 	int				nret = 0 ;
+	
+	SetLogcFile( "%s/log/rfs_worker_%d.log" , getenv("HOME") , getpid()%10 );
+	SetLogcLevel( LOGCLEVEL_DEBUG );
+	
+	chdir( p_rfs_conf->root );
 	
 	memset( & session , 0x00 , sizeof(struct RemoteFileSession) );
 	session.fd = -1 ;

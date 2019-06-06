@@ -11,5 +11,7 @@ STRUCT	rfs_conf
 			INT	4	port
 		}
 	}
+	
+	STRING	256	root
 }
 
