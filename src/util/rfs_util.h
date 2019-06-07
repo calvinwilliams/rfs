@@ -83,6 +83,7 @@ int RFSSendL2VString( int sock , char *buf , int data_len , struct timeval *p_el
 int RFSReceiveL2VString( int sock , char *buf , int *p_data_len , struct timeval *p_elapse );
 
 int RFSSendL4VString( int sock , char *buf , int data_len , struct timeval *p_elapse );
+int RFSReceiveL4VString( int sock , char *buf , int *p_data_len , struct timeval *p_elapse );
 int RFSReceiveL4VString_DUP( int sock , char **s_buf_ptr , int *p_data_len , struct timeval *p_elapse );
 
 

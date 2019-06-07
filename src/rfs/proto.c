@@ -5,7 +5,10 @@ int ropen( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSessi
 	int		nret = 0 ;
 	
 	if( p_session->fd != -1 )
-		return RFS_ERROR_INTERNAL;
+	{
+		WARNLOGC( "close fd[%d]" , p_session->fd )
+		close( p_session->fd );
+	}
 	
 	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
 	
@@ -32,14 +35,15 @@ int ropen( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSessi
 		INFOLOGC( "RFSReceiveInt4 flags[%d] ok" , p_session->flags )
 	}
 	
+	INFOLOGC( "<<< open[%s][%d]" , p_session->pathfilename , p_session->flags )
 	p_session->fd = open( p_session->pathfilename , p_session->flags ) ;
 	if( p_session->fd == -1 )
 	{
-		ERRORLOGC( "open[%s][%x][%x] failed[%d] , errno[%d]" , p_session->pathfilename , p_session->flags , p_session->mode , p_session->fd , errno )
+		ERRORLOGC( "open[%s][%d] failed[%d] , errno[%d]" , p_session->pathfilename , p_session->flags , p_session->fd , errno )
 	}
 	else
 	{
-		INFOLOGC( "open[%s][%x][%x] ok , fd[%d]" , p_session->pathfilename , p_session->flags , p_session->mode , p_session->fd )
+		INFOLOGC( "open[%s][%d] ok , fd[%d]" , p_session->pathfilename , p_session->flags , p_session->fd )
 	}
 	
 	nret = RFSSendInt4( accepted_sock , p_session->fd , p_elapse ) ;
@@ -62,7 +66,6 @@ int ropen( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSessi
 	else
 	{
 		INFOLOGC( "RFSSendInt4 errno[%d] ok" , errno )
-		DEBUGHEXLOGC( (char*) & errno , sizeof(int) , "len[%d]" , sizeof(int) )
 	}
 	
 	return 0;
@@ -73,7 +76,10 @@ int ropen3( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSess
 	int		nret = 0 ;
 	
 	if( p_session->fd != -1 )
-		return RFS_ERROR_INTERNAL;
+	{
+		WARNLOGC( "close fd[%d]" , p_session->fd )
+		close( p_session->fd );
+	}
 	
 	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
 	
@@ -111,6 +117,7 @@ int ropen3( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSess
 		INFOLOGC( "RFSReceiveInt4 flags[%d] ok" , p_session->mode )
 	}
 	
+	INFOLOGC( "<<< open[%s][%d][%d]" , p_session->pathfilename , p_session->flags , p_session->mode )
 	p_session->fd = open( p_session->pathfilename , p_session->flags , p_session->mode ) ;
 	if( p_session->fd == -1 )
 	{
@@ -148,6 +155,8 @@ int ropen3( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSess
 
 int rclose( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSession *p_session )
 {
+	int		ret ;
+	
 	int		nret = 0 ;
 	
 	if( p_session->fd == -1 )
@@ -163,29 +172,29 @@ int rclose( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSess
 	}
 	else
 	{
-		INFOLOGC( "RFSReceiveInt4 flags ok" )
-		DEBUGHEXLOGC( (char*) & (p_session->fd) , sizeof(int) , "len[%d]" , sizeof(int) )
+		INFOLOGC( "RFSReceiveInt4 flags[%d] ok" , p_session->fd )
 	}
 	
-	nret = close( p_session->fd ) ;
-	if( nret == -1 )
+	INFOLOGC( "<<< close[%d]" , p_session->fd )
+	ret = close( p_session->fd ) ;
+	if( ret == -1 )
 	{
-		ERRORLOGC( "close[%s][%d] failed[%d] , errno[%d]" , p_session->pathfilename , p_session->fd , nret , errno )
+		ERRORLOGC( "close[%s][%d] failed[%d] , errno[%d]" , p_session->pathfilename , p_session->fd , ret , errno )
 	}
 	else
 	{
 		INFOLOGC( "close[%s][%d] ok" , p_session->pathfilename , p_session->fd )
 	}
 	
-	nret = RFSSendInt4( accepted_sock , nret , p_elapse ) ;
+	nret = RFSSendInt4( accepted_sock , ret , p_elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendInt4 nret[%d] failed[%d]" , p_session->fd , nret )
+		ERRORLOGC( "RFSSendInt4 ret[%d] failed[%d]" , ret , nret )
 		return nret;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendInt4 nret[%d] ok" , p_session->fd )
+		INFOLOGC( "RFSSendInt4 ret[%d] ok" , ret )
 	}
 	
 	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
@@ -257,6 +266,7 @@ int rread( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSessi
 		sg_buf_size = read_len+1 ;
 	}
 	
+	INFOLOGC( "<<< read[%d][0x%X][%d]" , p_session->fd , sg_buf , read_len )
 	data_len = read( p_session->fd , sg_buf , read_len ) ;
 	if( data_len == -1 )
 	{
@@ -334,6 +344,7 @@ int rwrite( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSess
 		INFOLOGC( "RFSReceiveL4VString_DUP write_len[%d] ok" , write_len )
 	}
 	
+	INFOLOGC( "<<< read[%d][0x%X][%d]" , p_session->fd , p_buf , write_len )
 	wrote_len = write( p_session->fd , p_buf , write_len ) ;
 	if( wrote_len == -1 )
 	{

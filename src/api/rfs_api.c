@@ -34,7 +34,7 @@ static int rloadconfig()
 	if( file_content == NULL )
 	{
 		ERRORLOGC( "*** ERROR : Alloc failed , errno[%d]\n" , errno );
-		return -2;
+		return -1;
 	}
 	memset( file_content , 0x00 , file_len+1 );
 	nret = fread( file_content , file_len , 1 , fp ) ;
@@ -42,7 +42,7 @@ static int rloadconfig()
 	{
 		ERRORLOGC( "*** ERROR : Read config file[%s] failed , errno[%d]\n" , rfs_api_conf_pathfilename , errno );
 		free( file_content );
-		return -3;
+		return -1;
 	}
 	
 	g_rfs_api_conf = (rfs_api_conf *)malloc( sizeof(rfs_api_conf) ) ;
@@ -50,7 +50,7 @@ static int rloadconfig()
 	{
 		ERRORLOGC( "*** ERROR : Alloc failed , errno[%d]\n" , errno );
 		free( file_content );
-		return -5;
+		return -1;
 	}
 	memset( g_rfs_api_conf , 0x00 , sizeof(rfs_api_conf) );
 	nret = DSCDESERIALIZE_JSON_rfs_api_conf( NULL , file_content , NULL , g_rfs_api_conf ) ;
@@ -58,7 +58,7 @@ static int rloadconfig()
 	{
 		ERRORLOGC( "*** ERROR : Parse config[%s] failed[%d]\n" , file_content , nret );
 		free( file_content );
-		return -5;
+		return -1;
 	}
 	
 	free( file_content );
@@ -119,89 +119,80 @@ int rset( char *node_id )
 	return 0;
 }
 
-static __thread int			g_connect_sock = -1 ;
-static __thread struct sockaddr_in	g_connect_addr = { 0 } ;
+static __thread int			g_remote_fd = -1 ;
 
 static int rconnect()
 {
-	int		nret = 0 ;	
+	int			connect_sock ;
+	struct sockaddr_in	connect_addr ;
 	
-	g_connect_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
-	if( g_connect_sock == -1 )
+	int			nret = 0 ;	
+	
+	connect_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
+	if( connect_sock == -1 )
 	{
-		ERRORLOGC( "socket failed[%d] , errno[%d]" , g_connect_sock , errno )
+		ERRORLOGC( "socket failed[%d] , errno[%d]" , connect_sock , errno )
 		return -1;
 	}
 	
-	memset( & g_connect_addr , 0x00 , sizeof(struct sockaddr_in) );
-	g_connect_addr.sin_family = AF_INET ;
+	memset( & connect_addr , 0x00 , sizeof(struct sockaddr_in) );
+	connect_addr.sin_family = AF_INET ;
 	if( g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip[0] == '\0' )
-		g_connect_addr.sin_addr.s_addr = INADDR_ANY ;
+		connect_addr.sin_addr.s_addr = INADDR_ANY ;
 	else
-		g_connect_addr.sin_addr.s_addr = inet_addr(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip) ;
-	g_connect_addr.sin_port = htons( (unsigned short)(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port) );
-	nret = connect( g_connect_sock , (struct sockaddr *) & (g_connect_addr) , sizeof(struct sockaddr) ) ;
+		connect_addr.sin_addr.s_addr = inet_addr(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip) ;
+	connect_addr.sin_port = htons( (unsigned short)(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port) );
+	nret = connect( connect_sock , (struct sockaddr *) & (connect_addr) , sizeof(struct sockaddr) ) ;
 	if( nret == -1 )
 	{
 		ERRORLOGC( "connect[%s:%d] failed[%d] , errno[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , errno )
-		return -2;
+		return -1;
 	}
 	else
 	{
-		INFOLOGC( "connect[%s:%d] ok , sock[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , g_connect_sock )
+		INFOLOGC( "connect[%s:%d] ok , sock[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , connect_sock )
 	}
 	
-	return 0;
+	return connect_sock;
 }
 
 int ropen( char *pathfilename , int flags )
 {
 	struct timeval	elapse ;
-	char		reversed[ 2 + 1 ] = "" ;
-	int		remote_fd ;
+	int		connect_sock ;
 	
 	int		nret = 0 ;
 	
-	nret = rconnect() ;
-	if( nret )
-		return nret;
+	connect_sock = rconnect() ;
+	if( connect_sock == -1 )
+		return connect_sock;
 	
+	INFOLOGC( ">>> open[%s][%d]" , pathfilename , flags )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
 	
-	nret = RFSSendChar( g_connect_sock , 'O' , & elapse ) ;
+	nret = RFSSendChar( connect_sock , 'O' , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendChar command failed[%d]" , nret )
+		ERRORLOGC( "RFSSendChar command[O] failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar command ok" )
+		INFOLOGC( "RFSSendChar command[O] ok" )
 	}
 	
-	nret = RFSSendChar( g_connect_sock , '1' , & elapse ) ;
+	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendChar version failed[%d]" , nret )
+		ERRORLOGC( "RFSSendChar version[1] failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar version ok" )
+		INFOLOGC( "RFSSendChar version[1] ok" )
 	}
 	
-	nret = RFSSendString( g_connect_sock , reversed , 2 , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendString reversed failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendString reversed ok" )
-	}
-	
-	nret = RFSSendL2VString( g_connect_sock , pathfilename , strlen(pathfilename) , & elapse ) ;
+	nret = RFSSendL2VString( connect_sock , pathfilename , strlen(pathfilename) , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "RFSSendL2VString pathfilename[%s] failed[%d]" , pathfilename , nret )
@@ -212,7 +203,7 @@ int ropen( char *pathfilename , int flags )
 		INFOLOGC( "RFSSendL2VString pathfilename[%s] ok" , pathfilename )
 	}
 	
-	nret = RFSSendInt4( g_connect_sock , flags , & elapse ) ;
+	nret = RFSSendInt4( connect_sock , flags , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "RFSSendInt4 flags[%x] failed[%d]" , flags , nret )
@@ -223,21 +214,21 @@ int ropen( char *pathfilename , int flags )
 		INFOLOGC( "RFSSendInt4 flags[%x] ok" , flags )
 	}
 	
-	nret = RFSReceiveInt4( g_connect_sock , & remote_fd , & elapse ) ;
+	nret = RFSReceiveInt4( connect_sock , & g_remote_fd , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSReceiveInt4 remote_fd[%d] failed[%d]" , remote_fd , nret )
+		ERRORLOGC( "RFSReceiveInt4 remote_fd failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSReceiveInt4 remote_fd[%d] ok" , remote_fd )
+		INFOLOGC( "RFSReceiveInt4 remote_fd[%d] ok" , g_remote_fd )
 	}
 	
-	nret = RFSReceiveInt4( g_connect_sock , & errno , & elapse ) ;
+	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSReceiveInt4 errno[%d] failed[%d]" , errno , nret )
+		ERRORLOGC( "RFSReceiveInt4 errno failed[%d]" , nret )
 		return -1;
 	}
 	else
@@ -245,57 +236,58 @@ int ropen( char *pathfilename , int flags )
 		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
 	}
 	
-	return g_connect_sock;
+	if( g_remote_fd == -1 )
+	{
+		WARNLOGC( "close connect_sock[%d]" , connect_sock )
+		close( connect_sock ); connect_sock = -1 ;
+		return -1;
+	}
+	else
+	{
+		return connect_sock;
+	}
 }
 
 int ropen3( char *pathfilename , int flags , mode_t mode )
 {
 	struct timeval	elapse ;
-	char		reversed[ 2 + 1 ] = "" ;
-	int		remote_fd ;
+	int		connect_sock ;
 	
 	int		nret = 0 ;
 	
-	nret = rconnect() ;
-	if( nret )
-		return nret;
+DEBUGLOGC( "111" )
+	connect_sock = rconnect() ;
+DEBUGLOGC( "222" )
+	if( connect_sock == -1 )
+		return connect_sock;
+DEBUGLOGC( "333" )
 	
+	INFOLOGC( ">>> open3[%s][%d][%d]" , pathfilename , flags , mode )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
 	
-	nret = RFSSendChar( g_connect_sock , 'O' , & elapse ) ;
+	nret = RFSSendChar( connect_sock , 'O' , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendChar command failed[%d]" , nret )
+		ERRORLOGC( "RFSSendChar command[O] failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar command ok" )
+		INFOLOGC( "RFSSendChar command[O] ok" )
 	}
 	
-	nret = RFSSendChar( g_connect_sock , '3' , & elapse ) ;
+	nret = RFSSendChar( connect_sock , '3' , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendChar version failed[%d]" , nret )
+		ERRORLOGC( "RFSSendChar version[3] failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar version ok" )
+		INFOLOGC( "RFSSendChar version[3] ok" )
 	}
 	
-	nret = RFSSendString( g_connect_sock , reversed , 2 , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendString reversed failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendString reversed ok" )
-	}
-	
-	nret = RFSSendL2VString( g_connect_sock , pathfilename , strlen(pathfilename) , & elapse ) ;
+	nret = RFSSendL2VString( connect_sock , pathfilename , strlen(pathfilename) , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "RFSSendL2VString pathfilename[%s] failed[%d]" , pathfilename , nret )
@@ -306,7 +298,7 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 		INFOLOGC( "RFSSendL2VString pathfilename[%s] ok" , pathfilename )
 	}
 	
-	nret = RFSSendInt4( g_connect_sock , flags , & elapse ) ;
+	nret = RFSSendInt4( connect_sock , flags , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "RFSSendInt4 flags[%x] failed[%d]" , flags , nret )
@@ -317,7 +309,7 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 		INFOLOGC( "RFSSendInt4 flags[%x] ok" , flags )
 	}
 	
-	nret = RFSSendInt4( g_connect_sock , mode , & elapse ) ;
+	nret = RFSSendInt4( connect_sock , mode , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "RFSSendInt4 mode[%x] failed[%d]" , mode , nret )
@@ -328,18 +320,18 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 		INFOLOGC( "RFSSendInt4 mode[%x] ok" , mode )
 	}
 	
-	nret = RFSReceiveInt4( g_connect_sock , & remote_fd , & elapse ) ;
+	nret = RFSReceiveInt4( connect_sock , & g_remote_fd , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSReceiveInt4 remote_fd[%d] failed[%d]" , remote_fd , nret )
+		ERRORLOGC( "RFSReceiveInt4 remote_fd failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSReceiveInt4 remote_fd[%d] ok" , remote_fd )
+		INFOLOGC( "RFSReceiveInt4 remote_fd[%d] ok" , g_remote_fd )
 	}
 	
-	nret = RFSReceiveInt4( g_connect_sock , & errno , & elapse ) ;
+	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "RFSReceiveInt4 errno[%d] failed[%d]" , errno , nret )
@@ -350,71 +342,68 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
 	}
 	
-	return g_connect_sock;
+	if( g_remote_fd == -1 )
+	{
+		WARNLOGC( "close connect_sock[%d]" , connect_sock )
+		close( connect_sock ); connect_sock = -1 ;
+		return -1;
+	}
+	else
+	{
+		return connect_sock;
+	}
 }
 
-int rclose( int fd )
+int rclose( int connect_sock )
 {
 	struct timeval	elapse ;
-	char		reversed[ 2 + 1 ] = "" ;
 	int		ret ;
 	
 	int		nret = 0 ;
 	
-	nret = rconnect() ;
-	if( nret )
-		return nret;
+	if( connect_sock == -1 )
+		return -1;
 	
+	INFOLOGC( ">>> close[%d]" , connect_sock )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
 	
-	nret = RFSSendChar( g_connect_sock , 'O' , & elapse ) ;
+	nret = RFSSendChar( connect_sock , 'C' , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendChar command failed[%d]" , nret )
+		ERRORLOGC( "RFSSendChar command[C] failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar command ok" )
+		INFOLOGC( "RFSSendChar command[C] ok" )
 	}
 	
-	nret = RFSSendChar( g_connect_sock , '3' , & elapse ) ;
+	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendChar version failed[%d]" , nret )
+		ERRORLOGC( "RFSSendChar version[1] failed[%d]" , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar version ok" )
+		INFOLOGC( "RFSSendChar version[1] ok" )
 	}
 	
-	nret = RFSSendString( g_connect_sock , reversed , 2 , & elapse ) ;
+	nret = RFSSendInt4( connect_sock , g_remote_fd , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendString reversed failed[%d]" , nret )
+		ERRORLOGC( "RFSSendInt4 fd[%d] failed[%d]" , g_remote_fd , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendString reversed ok" )
+		INFOLOGC( "RFSSendInt4 fd[%d] ok" , g_remote_fd )
 	}
 	
-	nret = RFSSendInt4( g_connect_sock , fd , & elapse ) ;
+	nret = RFSReceiveInt4( connect_sock , & ret , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendInt4 fd[%d] failed[%d]" , fd , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendInt4 fd[%d] ok" , fd )
-	}
-	
-	nret = RFSReceiveInt4( g_connect_sock , & ret , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveInt4 ret[%d] failed[%d]" , ret , nret )
+		ERRORLOGC( "RFSReceiveInt4 ret failed[%d]" , nret )
 		return -1;
 	}
 	else
@@ -422,10 +411,10 @@ int rclose( int fd )
 		INFOLOGC( "RFSReceiveInt4 ret[%d] ok" , ret )
 	}
 	
-	nret = RFSReceiveInt4( g_connect_sock , & errno , & elapse ) ;
+	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSReceiveInt4 errno[%d] failed[%d]" , errno , nret )
+		ERRORLOGC( "RFSReceiveInt4 errno failed[%d]" , nret )
 		return -1;
 	}
 	else
@@ -436,14 +425,170 @@ int rclose( int fd )
 	return ret;
 }
 
-ssize_t rread( int fd , void *buf , size_t count )
+ssize_t rread( int connect_sock , void *buf , size_t count )
 {
-	return 0;
+	struct timeval	elapse ;
+	int		read_len ;
+	
+	int		nret = 0 ;
+	
+	if( connect_sock < 0 )
+		return -1;
+	
+	INFOLOGC( ">>> read[%d][0x%X][%d]" , connect_sock , buf , count )
+	SECONDS_TO_TIMEVAL( 600 , elapse )
+	
+	nret = RFSSendChar( connect_sock , 'R' , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendChar command[R] failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendChar command[R] ok" )
+	}
+	
+	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendChar version[1] failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendChar version[1] ok" )
+	}
+	
+	nret = RFSSendInt4( connect_sock , g_remote_fd , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 fd[%d] failed[%d]" , g_remote_fd , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendInt4 fd[%d] ok" , g_remote_fd )
+	}
+	
+	nret = RFSSendInt4( connect_sock , count , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 count[%d] failed[%d]" , count , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendInt4 count[%d] ok" , g_remote_fd )
+	}
+	
+	nret = RFSReceiveL4VString( connect_sock , buf , & read_len , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveL4VString read_len failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSReceiveInt4 read_len[%d] ok" , read_len )
+		DEBUGHEXLOGC( buf , read_len , "read_len[%d]bytes" , read_len )
+	}
+	
+	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 errno failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
+	}
+	
+	return (ssize_t)read_len;
 }
 
-ssize_t rwrite( int fd , char *buf , size_t count )
+ssize_t rwrite( int connect_sock , char *buf , size_t count )
 {
-	return 0;
+	struct timeval	elapse ;
+	int		wrote_len ;
+	
+	int		nret = 0 ;
+	
+	if( connect_sock < 0 )
+		return -1;
+	
+	INFOLOGC( ">>> write[%d][0x%X][%d]" , connect_sock , buf , count )
+	SECONDS_TO_TIMEVAL( 600 , elapse )
+	
+	nret = RFSSendChar( connect_sock , 'W' , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendChar command[W] failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendChar command[W] ok" )
+	}
+	
+	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendChar version[1] failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendChar version[1] ok" )
+	}
+	
+	nret = RFSSendInt4( connect_sock , g_remote_fd , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 fd[%d] failed[%d]" , g_remote_fd , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendInt4 fd[%d] ok" , g_remote_fd )
+	}
+	
+	nret = RFSSendL4VString( connect_sock , buf , count , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendL4VString data_len failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSSendL4VString data_len ok" )
+		DEBUGHEXLOGC( buf , count , "data_len[%d]bytes" , count )
+	}
+	
+	nret = RFSReceiveInt4( connect_sock , & wrote_len , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 wrote_len failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSReceiveInt4 wrote_len[%d] ok" , wrote_len )
+	}
+	
+	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 errno failed[%d]" , nret )
+		return -1;
+	}
+	else
+	{
+		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
+	}
+	
+	return wrote_len;
 }
 
 FILE *rfopen( char *pathfilename , char *mode )

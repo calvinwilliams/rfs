@@ -5,13 +5,12 @@ int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_acc
 	struct timeval			elapse ;
 	char				command ;
 	char				version ;
-	char				reversed[ 2 + 1 ] ;
 	
 	struct RemoteFileSession	session ;
 	
 	int				nret = 0 ;
 	
-	SetLogcFile( "%s/log/rfs_worker_%d.log" , getenv("HOME") , getpid()%10 );
+	SetLogcFile( "%s/log/rfs_worker.log" , getenv("HOME") );
 	SetLogcLevel( LOGCLEVEL_DEBUG );
 	
 	chdir( p_rfs_conf->root );
@@ -32,12 +31,11 @@ int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_acc
 		if( nret )
 		{
 			ERRORLOGC( "RFSReceiveChar COMMAND failed[%d]" , nret )
-			return nret;
+			break;
 		}
 		else
 		{
-			INFOLOGC( "RFSReceiveChar COMMAND ok" )
-			DEBUGHEXLOGC( & version , 1 , "len[%d]" , 1 )
+			INFOLOGC( "RFSReceiveChar COMMAND[%c] ok" , command )
 		}
 		
 		SECONDS_TO_TIMEVAL( 60 , elapse )
@@ -46,24 +44,11 @@ int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_acc
 		if( nret )
 		{
 			ERRORLOGC( "RFSReceiveChar VERSION failed[%d]" , nret )
-			return nret;
+			break;
 		}
 		else
 		{
-			INFOLOGC( "RFSReceiveChar REVERSED ok" )
-			DEBUGHEXLOGC( & version , 1 , "len[%d]" , 1 )
-		}
-		
-		nret = RFSReceiveString( accepted_sock , reversed , 2 , & elapse ) ;
-		if( nret )
-		{
-			ERRORLOGC( "RFSReceiveString REVERSED failed[%d]" , nret )
-			return nret;
-		}
-		else
-		{
-			INFOLOGC( "RFSReceiveString REVERSED ok" )
-			DEBUGHEXLOGC( reversed , 2 , "len[%d]" , 2 )
+			INFOLOGC( "RFSReceiveChar VERSION[%c] ok" , version )
 		}
 		
 		if( command == 'O' && version == '1' )
@@ -107,13 +92,17 @@ int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_acc
 		else
 		{
 			ERRORLOGC( "unknow COMMAND[%c] and VERSION[%c]" , command , version )
-			return -1;
+			break;
 		}
 	}
 	
 	if( session.fd >= 0 )
+	{
+		INFOLOGC( "close file fd[%d]" , session.fd )
 		close( session.fd );
+	}
 	
+	INFOLOGC( "close accepted sock[%d]" , accepted_sock )
 	close( accepted_sock );
 	
 	return 0;

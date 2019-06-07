@@ -58,7 +58,7 @@ int monitor( rfs_conf *p_rfs_conf )
 		if( accepted_sock == -1 )
 		{
 			FATALLOGC( "accept failed , errno[%d]" , errno )
-			return -1;
+			break;
 		}
 		else
 		{
@@ -69,12 +69,14 @@ int monitor( rfs_conf *p_rfs_conf )
 		if( pid == -1 )
 		{
 			FATALLOGC( "fork failed , errno[%d]" , errno )
-			return -1;
+			break;
 		}
 		else if( pid == 0 )
 		{
 			exit( -worker( p_rfs_conf , accepted_sock , & accepted_addr ) );
 		}
+		
+		close( accepted_sock );
 	}
 	
 	close( listen_sock );

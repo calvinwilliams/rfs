@@ -17,10 +17,6 @@ int main()
 		printf( "rset[%s] ok\n" , NODE_ID );
 	}
 	
-	
-	
-	
-	
 	return 0;
 }
 

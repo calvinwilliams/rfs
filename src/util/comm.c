@@ -249,6 +249,31 @@ int RFSSendL4VString( int sock , char *buf , int data_len , struct timeval *p_el
 	return 0;
 }
 
+int RFSReceiveL4VString( int sock , char *buf , int *p_data_len , struct timeval *p_elapse )
+{
+	uint32_t	n4 ;
+	uint32_t	data_len ;
+	
+	int		nret = 0 ;
+	
+	nret = RFSReceiveData( sock , (char*) & n4 , sizeof(uint32_t) , NULL , p_elapse ) ;
+	if( nret )
+		return nret;
+	
+	data_len = (int)ntohl( n4 ) ;
+	if( data_len > 0 )
+	{
+		nret = RFSReceiveData( sock , buf , data_len , NULL , p_elapse ) ;
+		if( nret )
+			return nret;
+	}
+	
+	if( p_data_len )
+		(*p_data_len) = data_len ;
+	
+	return 0;
+}
+
 static __thread char		*sg_buf = NULL ;
 static __thread uint32_t	sg_buf_size = 0 ;
 
