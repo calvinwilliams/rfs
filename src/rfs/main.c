@@ -10,6 +10,8 @@ int main()
 	
 	int		nret = 0 ;
 	
+	umask(0);
+	
 	memset( rfs_conf_pathfilename , 0x00 , sizeof(rfs_conf_pathfilename) );
 	snprintf( rfs_conf_pathfilename , sizeof(rfs_conf_pathfilename)-1 , "%s/etc/rfs.conf" , getenv("HOME") );
 	fp = fopen( rfs_conf_pathfilename , "r" ) ;

@@ -270,11 +270,11 @@ int rread( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSessi
 	data_len = read( p_session->fd , sg_buf , read_len ) ;
 	if( data_len == -1 )
 	{
-		ERRORLOGC( "read[%s][%d] failed[%d] , errno[%d] , read_len[%d]" , p_session->pathfilename , p_session->fd , nret , errno , read_len )
+		ERRORLOGC( "read[%s][%d] failed[%d] , errno[%d] , read_len[%d]" , p_session->pathfilename , p_session->fd , nret , errno , data_len )
 	}
 	else
 	{
-		INFOLOGC( "read[%s][%d] ok , read_len[%d]" , p_session->pathfilename , p_session->fd , read_len )
+		INFOLOGC( "read[%s][%d] ok , read_len[%d]" , p_session->pathfilename , p_session->fd , data_len )
 	}
 	
 	nret = RFSSendL4VString( accepted_sock , sg_buf , data_len , p_elapse ) ;
@@ -286,7 +286,7 @@ int rread( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSessi
 	else
 	{
 		INFOLOGC( "RFSSendL4VString data_len[%d] ok" , data_len )
-		DEBUGLOGC( sg_buf , data_len , "data_len[%d]bytes" ,data_len )
+		DEBUGHEXLOGC( sg_buf , data_len , "data_len[%d]bytes" , data_len )
 	}
 	
 	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
@@ -342,9 +342,10 @@ int rwrite( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSess
 	else
 	{
 		INFOLOGC( "RFSReceiveL4VString_DUP write_len[%d] ok" , write_len )
+		DEBUGHEXLOGC( p_buf , write_len , "data_len[%d]bytes" , write_len )
 	}
 	
-	INFOLOGC( "<<< read[%d][0x%X][%d]" , p_session->fd , p_buf , write_len )
+	INFOLOGC( "<<< write[%d][0x%X][%d]" , p_session->fd , p_buf , write_len )
 	wrote_len = write( p_session->fd , p_buf , write_len ) ;
 	if( wrote_len == -1 )
 	{

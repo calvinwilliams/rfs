@@ -48,6 +48,11 @@ int monitor( rfs_conf *p_rfs_conf )
 		INFOLOGC( "listen[%s:%d][%d] ok" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock )
 	}
 	
+	{
+		int	onoff = 1 ;
+		setsockopt( listen_sock , SOL_SOCKET , SO_REUSEADDR , (void *) & onoff , sizeof(int) );
+	}
+	
 	signal( SIGCLD , NULL );
 	signal( SIGCHLD , NULL );
 	

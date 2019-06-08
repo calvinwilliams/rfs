@@ -145,7 +145,7 @@ static int rconnect()
 	nret = connect( connect_sock , (struct sockaddr *) & (connect_addr) , sizeof(struct sockaddr) ) ;
 	if( nret == -1 )
 	{
-		ERRORLOGC( "connect[%s:%d] failed[%d] , errno[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , errno )
+		ERRORLOGC( "connect[%s:%d] failed[%d] , errno[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , nret , errno )
 		return -1;
 	}
 	else
@@ -255,12 +255,9 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 	
 	int		nret = 0 ;
 	
-DEBUGLOGC( "111" )
 	connect_sock = rconnect() ;
-DEBUGLOGC( "222" )
 	if( connect_sock == -1 )
 		return connect_sock;
-DEBUGLOGC( "333" )
 	
 	INFOLOGC( ">>> open3[%s][%d][%d]" , pathfilename , flags , mode )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
