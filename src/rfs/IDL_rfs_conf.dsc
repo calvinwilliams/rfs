@@ -1,5 +1,10 @@
 STRUCT	rfs_conf
 {
+	STRUCT	process_model
+	{
+		INT	4	process_count
+	}
+	
 	STRUCT	node
 	{
 		STRING	32	id
@@ -12,6 +17,11 @@ STRUCT	rfs_conf
 		}
 	}
 	
-	STRING	256	root
+	STRUCT	file_system
+	{
+		STRING	256	root
+	}
+	
+	STRING	5	log_level
 }
 

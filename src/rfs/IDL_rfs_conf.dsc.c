@@ -24,18 +24,25 @@ int DSCSERIALIZE_JSON_rfs_conf( rfs_conf *pst , char *encoding , char *buf , int
 	memset( tabs , '\t' , 10 );
 	len=SNPRINTF(buf,remain_len,"{\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"	"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
-	len=SNPRINTF(buf,remain_len,"\"root\" : "); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
-	if(pst->root[0]==DSCNULL)
+	len=SNPRINTF(buf,remain_len,"\"log_level\" : "); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	if(pst->log_level[0]==DSCNULL)
 	{
 	len=SNPRINTF(buf,remain_len,"null"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	}
 	else
 	{
 	len=SNPRINTF(buf,remain_len,"\""); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
-	JSONESCAPE_EXPAND(pst->root,strlen(pst->root),buf,len,remain_len); if(len<0)return -7; buf+=len; remain_len-=len;
+	JSONESCAPE_EXPAND(pst->log_level,strlen(pst->log_level),buf,len,remain_len); if(len<0)return -7; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"\""); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	}
 	len=SNPRINTF(buf,remain_len," ,\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	\"process_model\" : \n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	{\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"		"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\"process_count\" : "); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"%d",pst->process_model.process_count); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	} ,\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"	\"node\" : \n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"	{\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"		"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
@@ -97,6 +104,22 @@ int DSCSERIALIZE_JSON_rfs_conf( rfs_conf *pst , char *encoding , char *buf , int
 	len=SNPRINTF(buf,remain_len,"%d",pst->node.server.port); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"		}\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	} ,\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	\"file_system\" : \n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	{\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"		"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\"root\" : "); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	if(pst->file_system.root[0]==DSCNULL)
+	{
+	len=SNPRINTF(buf,remain_len,"null"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	}
+	else
+	{
+	len=SNPRINTF(buf,remain_len,"\""); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	JSONESCAPE_EXPAND(pst->file_system.root,strlen(pst->file_system.root),buf,len,remain_len); if(len<0)return -7; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\""); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	}
+	len=SNPRINTF(buf,remain_len,"\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"	}\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"}\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	
@@ -149,18 +172,25 @@ int DSCSERIALIZE_JSON_DUP_rfs_conf( rfs_conf *pst , char *encoding , char **pp_b
 	memset( tabs , '\t' , 10 );
 	while(1){len=SNPRINTF(buf,remain_len,"{\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"	");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
-	while(1){len=SNPRINTF(buf,remain_len,"\"root\" : ");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
-	if(pst->root[0]==DSCNULL)
+	while(1){len=SNPRINTF(buf,remain_len,"\"log_level\" : ");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	if(pst->log_level[0]==DSCNULL)
 	{
 	while(1){len=SNPRINTF(buf,remain_len,"null");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	}
 	else
 	{
 	while(1){len=SNPRINTF(buf,remain_len,"\"");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
-	while(1){JSONESCAPE_EXPAND(pst->root,strlen(pst->root),buf,len,remain_len);if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){JSONESCAPE_EXPAND(pst->log_level,strlen(pst->log_level),buf,len,remain_len);if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"\"");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	}
 	while(1){len=SNPRINTF(buf,remain_len," ,\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	\"process_model\" : \n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	{\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"		");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\"process_count\" : ");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"%d",pst->process_model.process_count);if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	} ,\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"	\"node\" : \n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"	{\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"		");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
@@ -222,6 +252,22 @@ int DSCSERIALIZE_JSON_DUP_rfs_conf( rfs_conf *pst , char *encoding , char **pp_b
 	while(1){len=SNPRINTF(buf,remain_len,"%d",pst->node.server.port);if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"		}\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	} ,\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	\"file_system\" : \n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	{\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"		");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\"root\" : ");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	if(pst->file_system.root[0]==DSCNULL)
+	{
+	while(1){len=SNPRINTF(buf,remain_len,"null");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	}
+	else
+	{
+	while(1){len=SNPRINTF(buf,remain_len,"\"");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){JSONESCAPE_EXPAND(pst->file_system.root,strlen(pst->file_system.root),buf,len,remain_len);if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\"");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	}
+	while(1){len=SNPRINTF(buf,remain_len,"\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"	}\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"}\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	
@@ -259,9 +305,12 @@ int CallbackOnJsonNode_rfs_conf( int type , char *jpath , int jpath_len , int jp
 	}
 	else if( type & FASTERJSON_NODE_LEAF )
 	{
-		/* root */
-		if( jpath_len == 5 && strncmp( jpath , "/root" , jpath_len ) == 0 )
-		{JSONUNESCAPE_FOLD(content,content_len,pst->root,len,sizeof(pst->root)-1); if(len<0){_DSC_errline=__LINE__;return -7;}}
+		/* log_level */
+		if( jpath_len == 10 && strncmp( jpath , "/log_level" , jpath_len ) == 0 )
+		{JSONUNESCAPE_FOLD(content,content_len,pst->log_level,len,sizeof(pst->log_level)-1); if(len<0){_DSC_errline=__LINE__;return -7;}}
+			/* process_count */
+			if( jpath_len == 28 && strncmp( jpath , "/process_model/process_count" , jpath_len ) == 0 )
+			{NATOI(content,content_len,pst->process_model.process_count);}
 			/* id */
 			if( jpath_len == 8 && strncmp( jpath , "/node/id" , jpath_len ) == 0 )
 			{JSONUNESCAPE_FOLD(content,content_len,pst->node.id,len,sizeof(pst->node.id)-1); if(len<0){_DSC_errline=__LINE__;return -7;}}
@@ -277,6 +326,9 @@ int CallbackOnJsonNode_rfs_conf( int type , char *jpath , int jpath_len , int jp
 				/* port */
 				if( jpath_len == 17 && strncmp( jpath , "/node/server/port" , jpath_len ) == 0 )
 				{NATOI(content,content_len,pst->node.server.port);}
+			/* root */
+			if( jpath_len == 17 && strncmp( jpath , "/file_system/root" , jpath_len ) == 0 )
+			{JSONUNESCAPE_FOLD(content,content_len,pst->file_system.root,len,sizeof(pst->file_system.root)-1); if(len<0){_DSC_errline=__LINE__;return -7;}}
 	}
 	
 	return 0;

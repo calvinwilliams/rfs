@@ -8,15 +8,16 @@
 ###### 源文件配置区
 #@ c_FILE
 c_FILE		=	\
+			list.c \
 			LOGC.c \
 			fasterjson.c \
-			comm.c \
 
 ###### 目标文件、安装目录配置区
 include makeinstall
 LIB		=	librfs_util.so
 LIBINST		=	$(_LIBINST)
 HDER		= \
+			list.h \
 			LOGC.h \
 			fasterjson.h \
 			rfs_util.h \

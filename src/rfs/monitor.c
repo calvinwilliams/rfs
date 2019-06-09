@@ -5,16 +5,24 @@ int monitor( rfs_conf *p_rfs_conf )
 	int			listen_sock ;
 	struct sockaddr_in	listen_addr ;
 	
+	pid_t			*a_pids = NULL ;
+	int			process_index ;
+	pid_t			pid ;
+	int			status ;
+	
+	union semun		semopts ;
+	int			accepting_mutex ;
+	
+	/*
 	socklen_t		accepted_addr_len ;
 	struct sockaddr_in	accepted_addr ;
 	int			accepted_sock ;
-	
-	pid_t			pid ;
+	*/
 	
 	int			nret = 0 ;
 	
 	SetLogcFile( "%s/log/rfs_monitor.log" , getenv("HOME") );
-	SetLogcLevel( LOGCLEVEL_DEBUG );
+	SetLogcLevel( RFSConvertLogLevelString(p_rfs_conf->log_level) );
 	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
@@ -53,11 +61,103 @@ int monitor( rfs_conf *p_rfs_conf )
 		setsockopt( listen_sock , SOL_SOCKET , SO_REUSEADDR , (void *) & onoff , sizeof(int) );
 	}
 	
+	a_pids = (pid_t*)malloc( sizeof(pid_t) * p_rfs_conf->process_model.process_count ) ;
+	if( a_pids == NULL )
+	{
+		FATALLOGC( "malloc failed , errno[%d]" , errno )
+		return -1;
+	}
+	memset( a_pids , 0x00 , sizeof(pid_t) * p_rfs_conf->process_model.process_count );
+	
+	accepting_mutex = semget( IPC_PRIVATE , 1 , IPC_CREAT | 0600 ) ;
+	if( accepting_mutex == -1 )
+	{
+		FATALLOGC( "semget failed , errno[%d]" , errno )
+		return -1;
+	}
+	
+	memset( & semopts , 0x00 , sizeof(union semun) );
+	semopts.val = 1 ;
+	nret = semctl( accepting_mutex , 0 , SETVAL , semopts ) ;
+	if( nret == -1 )
+	{
+		FATALLOGC( "semctl failed , errno[%d]" , errno )
+		return -1;
+	}
+	
 	signal( SIGCLD , NULL );
 	signal( SIGCHLD , NULL );
 	
+	for( process_index = 0 ; process_index < p_rfs_conf->process_model.process_count ; process_index++ )
+	{
+		a_pids[process_index] = fork() ;
+		if( a_pids[process_index] == -1 )
+		{
+			FATALLOGC( "fork[%d] failed , errno[%d]" , process_index , errno )
+			break;
+		}
+		else if( pid == 0 )
+		{
+			INFOLOGC( "fork[%d] ok" , process_index )
+			exit( -worker( p_rfs_conf , process_index , listen_sock , accepting_mutex ) );
+		}
+	}
+	
 	while(1)
 	{
+		while(1)
+		{
+			pid = waitpid( -1 , & status , WNOHANG ) ;
+			if( pid == -1 )
+			{
+				FATALLOGC( "waitpid failed , errno[%d]" , errno )
+				break;
+			}
+			else if( pid == 0 )
+			{
+				break;
+			}
+			
+			if( WEXITSTATUS(status) || WIFSIGNALED(status) || WTERMSIG(status) || WCOREDUMP(status) )
+			{
+				ERRORLOGC( "pid[%d] WIFEXITED[%d] WEXITSTATUS[%d] WIFSIGNALED[%d] WTERMSIG[%d] WCOREDUMP[%d]" , pid , WIFEXITED(status) , WEXITSTATUS(status) , WIFSIGNALED(status) , WTERMSIG(status) , WCOREDUMP(status) )
+			}
+			else
+			{
+				INFOLOGC( "pid[%d] WIFEXITED[%d] WEXITSTATUS[%d] WIFSIGNALED[%d] WTERMSIG[%d] WCOREDUMP[%d]" , pid , WIFEXITED(status) , WEXITSTATUS(status) , WIFSIGNALED(status) , WTERMSIG(status) , WCOREDUMP(status) )
+			}
+			
+			for( process_index = 0 ; process_index < p_rfs_conf->process_model.process_count ; process_index++ )
+			{
+				if( pid == a_pids[process_index] )
+					break;
+			}
+			if( process_index >= p_rfs_conf->process_count )
+			{
+				ERRORLOGC( "unknow worker , pid[%d]" , pid )
+				continue;
+			}
+			
+			INFOLOGC( "reboot worker , pid[%d]" , pid )
+			
+			a_pids[process_index] = fork() ;
+			if( a_pids[process_index] == -1 )
+			{
+				FATALLOGC( "fork[%d] failed , errno[%d]" , process_index , errno )
+				break;
+			}
+			else if( pid == 0 )
+			{
+				INFOLOGC( "fork[%d] ok" , process_index )
+				exit( -worker( p_rfs_conf , process_index , listen_sock , accepting_mutex ) );
+			}
+		}
+		
+		INFOLOGC( "no more workers exit" )
+		
+		sleep(1);
+		
+		/*
 		accepted_addr_len = sizeof(struct sockaddr) ;
 		accepted_sock = accept( listen_sock , (struct sockaddr *) & accepted_addr , & accepted_addr_len ) ;
 		if( accepted_sock == -1 )
@@ -82,6 +182,7 @@ int monitor( rfs_conf *p_rfs_conf )
 		}
 		
 		close( accepted_sock );
+		*/
 	}
 	
 	close( listen_sock );

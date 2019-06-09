@@ -1,20 +1,85 @@
 #include "in.h"
 
-int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_accepted_addr )
+int worker( rfs_conf *p_rfs_conf , int process_index , int listen_sock , int accepting_mutex )
 {
+	int				epoll_fd ;
+	struct epoll_event		event ;
+	struct epoll_event		events[ EPOLL_EVENT_COUNT ] ;
+	struct epoll_event		*p_event = NULL ;
+	
+	struct ListenSession		listen_session ;
+	
+	struct sembuf			sembuf ;
+	
 	struct timeval			elapse ;
 	char				command ;
 	char				version ;
 	
+	/*
 	struct RemoteFileSession	session ;
+	*/
+	struct list_head		list_order_by_active_timestamp ;
 	
 	int				nret = 0 ;
 	
 	SetLogcFile( "%s/log/rfs_worker.log" , getenv("HOME") );
-	SetLogcLevel( LOGCLEVEL_DEBUG );
+	SetLogcLevel( RFSConvertLogLevelString(p_rfs_conf->log_level) );
 	
-	chdir( p_rfs_conf->root );
+	epoll_fd = epoll_create( 1024 ) ;
+	if( epoll_fd == -1 )
+	{
+		FATALLOGC( "epoll_create failed , errno[%d]" , errno )
+		return -1;
+	}
 	
+	listen_session.listen_sock = listen_sock ;
+	
+	memset( & event , 0x00 , sizeof(struct epoll_event) );
+	event.events = EPOLLIN ;
+	event.data.ptr = & listen_session ;
+	nret = epoll_ctl( epoll_fd , EPOLL_CTL_ADD , listen_sock , & event ) ;
+	if( nret == -1 )
+	{
+		FATALLOGC( "epoll_ctl listen socket failed , errno[%d]" , errno )
+		return -1;
+	}
+	
+	chdir( p_rfs_conf->file_system.root );
+	
+	while(1)
+	{
+		INFOLOGC( "enter accepting mutex ..." )
+		
+		memset( & sembuf , 0x00 , sizeof(struct sembuf) );
+		sembuf.sem_num = 0 ;
+		sembuf.sem_op = -1 ;
+		sembuf.sem_flg = SEM_UNDO ;
+		nret = semop( accepting_mutex , & sembuf , 1 ) ;
+		if( nret == -1 )
+		{
+			FATALLOGC( "epoll_ctl listen socket failed , errno[%d]" , errno )
+			return -1;
+		}
+		
+		INFOLOGC( "enter accepting mutex ok" )
+		
+		
+		
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	/*
 	memset( & session , 0x00 , sizeof(struct RemoteFileSession) );
 	session.fd = -1 ;
 	
@@ -101,9 +166,12 @@ int worker( rfs_conf *p_rfs_conf , int accepted_sock , struct sockaddr_in *p_acc
 		INFOLOGC( "close file fd[%d]" , session.fd )
 		close( session.fd );
 	}
+	*/
 	
+	/*
 	INFOLOGC( "close accepted sock[%d]" , accepted_sock )
 	close( accepted_sock );
+	*/
 	
 	return 0;
 }

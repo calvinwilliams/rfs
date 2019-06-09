@@ -97,7 +97,11 @@ extern "C" {
 
 typedef struct
 {
-	char	root[ 256 + 1 ] ;
+	char	log_level[ 5 + 1 ] ;
+	struct
+	{
+		int	process_count ;
+	} process_model ;
 	struct
 	{
 		char	id[ 32 + 1 ] ;
@@ -109,6 +113,10 @@ typedef struct
 			int	port ;
 		} server ;
 	} node ;
+	struct
+	{
+		char	root[ 256 + 1 ] ;
+	} file_system ;
 } rfs_conf ;
 
 _WINDLL_FUNC int DSCINIT_rfs_conf( rfs_conf *pst );
