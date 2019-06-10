@@ -17,5 +17,5 @@ int RFSConvertLogLevelString( char *log_level_str )
 	else if( STRICMP( log_level_str , == , "DEBUG" ) )
 		return LOGCLEVEL_DEBUG;
 	else
-		return LOGCLEVEL_NOLOG;
+		return LOGCLEVEL_INVALID;
 }

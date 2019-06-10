@@ -6,7 +6,7 @@
 #define TEST_ROPEN3_TXT	"test_ropen3.txt"
 
 /*
-/home/calvin/rfs_root/ $ rmlog ; find . -name "*.txt" -exec rm -f {} \; -print
+/home/calvin/rfs_root/ $ rmlog ; find . -name "test_r*.txt" -exec rm -f {} \; -print
 */
 
 int main()

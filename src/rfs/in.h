@@ -9,14 +9,7 @@
 extern "C" {
 #endif
 
-#define EPOLL_EVENT_COUNT	64
-
-struct ListenSession
-{
-	int			listen_sock ;
-} ;
-
-struct AcceptedSession
+struct RemoteFileSession
 {
 	int			accepted_sock ;
 	
@@ -26,13 +19,11 @@ struct AcceptedSession
 	int			mode ;
 	
 	int			file_fd ;
-	
-	int			active_timestamp ;
-	struct list_head	node_order_by_active_timestamp ;
 } ;
 
 int monitor( rfs_conf *p_rfs_conf );
-int worker( rfs_conf *p_rfs_conf , int listen_sock , int accepting_mutex );
+int worker( rfs_conf *p_rfs_conf , int process_index , int listen_sock , int accepting_mutex );
+int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock );
 
 /*
  COMMAND : ropen

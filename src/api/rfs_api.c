@@ -167,8 +167,9 @@ int ropen( char *pathfilename , int flags )
 	if( connect_sock == -1 )
 		return connect_sock;
 	
-	INFOLOGC( ">>> open[%s][%d]" , pathfilename , flags )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
+	
+	INFOLOGC( "request open[%s][%d] ..." , pathfilename , flags )
 	
 	nret = RFSSendChar( connect_sock , 'O' , & elapse ) ;
 	if( nret )
@@ -178,7 +179,7 @@ int ropen( char *pathfilename , int flags )
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar command[O] ok" )
+		DEBUGLOGC( "RFSSendChar command[O] ok" )
 	}
 	
 	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
@@ -189,7 +190,7 @@ int ropen( char *pathfilename , int flags )
 	}
 	else
 	{
-		INFOLOGC( "RFSSendChar version[1] ok" )
+		DEBUGLOGC( "RFSSendChar version[1] ok" )
 	}
 	
 	nret = RFSSendL2VString( connect_sock , pathfilename , strlen(pathfilename) , & elapse ) ;
@@ -200,18 +201,18 @@ int ropen( char *pathfilename , int flags )
 	}
 	else
 	{
-		INFOLOGC( "RFSSendL2VString pathfilename[%s] ok" , pathfilename )
+		DEBUGLOGC( "RFSSendL2VString pathfilename[%s] ok" , pathfilename )
 	}
 	
 	nret = RFSSendInt4( connect_sock , flags , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendInt4 flags[%x] failed[%d]" , flags , nret )
+		ERRORLOGC( "RFSSendInt4 flags[%d] failed[%d]" , flags , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendInt4 flags[%x] ok" , flags )
+		DEBUGLOGC( "RFSSendInt4 flags[%d] ok" , flags )
 	}
 	
 	nret = RFSReceiveInt4( connect_sock , & g_remote_fd , & elapse ) ;
@@ -222,7 +223,7 @@ int ropen( char *pathfilename , int flags )
 	}
 	else
 	{
-		INFOLOGC( "RFSReceiveInt4 remote_fd[%d] ok" , g_remote_fd )
+		DEBUGLOGC( "RFSReceiveInt4 remote_fd[%d] ok" , g_remote_fd )
 	}
 	
 	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
@@ -233,17 +234,19 @@ int ropen( char *pathfilename , int flags )
 	}
 	else
 	{
-		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
+		DEBUGLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
 	}
 	
 	if( g_remote_fd == -1 )
 	{
-		WARNLOGC( "close connect_sock[%d]" , connect_sock )
+		ERRORLOGC( "request open[%s][%d] response[%d][%d]" , pathfilename , flags , g_remote_fd , errno )
+		INFOLOGC( "close connect_sock[%d]" , connect_sock )
 		close( connect_sock ); connect_sock = -1 ;
 		return -1;
 	}
 	else
 	{
+		INFOLOGC( "request open[%s][%d] response[%d][%d]" , pathfilename , flags , g_remote_fd , errno )
 		return connect_sock;
 	}
 }
@@ -259,8 +262,9 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 	if( connect_sock == -1 )
 		return connect_sock;
 	
-	INFOLOGC( ">>> open3[%s][%d][%d]" , pathfilename , flags , mode )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
+	
+	INFOLOGC( "request open3[%s][%d][%d]" , pathfilename , flags , mode )
 	
 	nret = RFSSendChar( connect_sock , 'O' , & elapse ) ;
 	if( nret )
@@ -298,23 +302,23 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 	nret = RFSSendInt4( connect_sock , flags , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendInt4 flags[%x] failed[%d]" , flags , nret )
+		ERRORLOGC( "RFSSendInt4 flags[%d] failed[%d]" , flags , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendInt4 flags[%x] ok" , flags )
+		INFOLOGC( "RFSSendInt4 flags[%d] ok" , flags )
 	}
 	
 	nret = RFSSendInt4( connect_sock , mode , & elapse ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendInt4 mode[%x] failed[%d]" , mode , nret )
+		ERRORLOGC( "RFSSendInt4 mode[%d] failed[%d]" , mode , nret )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "RFSSendInt4 mode[%x] ok" , mode )
+		INFOLOGC( "RFSSendInt4 mode[%d] ok" , mode )
 	}
 	
 	nret = RFSReceiveInt4( connect_sock , & g_remote_fd , & elapse ) ;
@@ -341,12 +345,14 @@ int ropen3( char *pathfilename , int flags , mode_t mode )
 	
 	if( g_remote_fd == -1 )
 	{
-		WARNLOGC( "close connect_sock[%d]" , connect_sock )
+		ERRORLOGC( "request open[%s][%d] response[%d][%d]" , pathfilename , flags , g_remote_fd , errno )
+		INFOLOGC( "close connect_sock[%d]" , connect_sock )
 		close( connect_sock ); connect_sock = -1 ;
 		return -1;
 	}
 	else
 	{
+		INFOLOGC( "request open[%s][%d] response[%d][%d]" , pathfilename , flags , g_remote_fd , errno )
 		return connect_sock;
 	}
 }
@@ -361,8 +367,9 @@ int rclose( int connect_sock )
 	if( connect_sock == -1 )
 		return -1;
 	
-	INFOLOGC( ">>> close[%d]" , connect_sock )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
+	
+	INFOLOGC( "request close[%d]" , connect_sock )
 	
 	nret = RFSSendChar( connect_sock , 'C' , & elapse ) ;
 	if( nret )
@@ -419,6 +426,15 @@ int rclose( int connect_sock )
 		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
 	}
 	
+	if( ret == -1 )
+	{
+		ERRORLOGC( "request close[%d] response[%d][%d]" , connect_sock , ret , errno )
+	}
+	else
+	{
+		INFOLOGC( "request close[%d] response[%d][%d]" , connect_sock , ret , errno )
+	}
+	
 	return ret;
 }
 
@@ -432,8 +448,9 @@ ssize_t rread( int connect_sock , void *buf , size_t count )
 	if( connect_sock < 0 )
 		return -1;
 	
-	INFOLOGC( ">>> read[%d][0x%X][%d]" , connect_sock , buf , count )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
+	
+	INFOLOGC( "request read[%d][0x%X][%d]" , connect_sock , buf , count )
 	
 	nret = RFSSendChar( connect_sock , 'R' , & elapse ) ;
 	if( nret )
@@ -502,6 +519,15 @@ ssize_t rread( int connect_sock , void *buf , size_t count )
 		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
 	}
 	
+	if( read_len == -1 )
+	{
+		ERRORLOGC( "request read[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , read_len , errno )
+	}
+	else
+	{
+		INFOLOGC( "request read[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , read_len , errno )
+	}
+	
 	return (ssize_t)read_len;
 }
 
@@ -515,8 +541,9 @@ ssize_t rwrite( int connect_sock , char *buf , size_t count )
 	if( connect_sock < 0 )
 		return -1;
 	
-	INFOLOGC( ">>> write[%d][0x%X][%d]" , connect_sock , buf , count )
 	SECONDS_TO_TIMEVAL( 600 , elapse )
+	
+	INFOLOGC( "request write[%d][0x%X][%d]" , connect_sock , buf , count )
 	
 	nret = RFSSendChar( connect_sock , 'W' , & elapse ) ;
 	if( nret )
@@ -583,6 +610,15 @@ ssize_t rwrite( int connect_sock , char *buf , size_t count )
 	else
 	{
 		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
+	}
+	
+	if( wrote_len == -1 )
+	{
+		ERRORLOGC( "request write[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , wrote_len , errno )
+	}
+	else
+	{
+		INFOLOGC( "request write[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , wrote_len , errno )
 	}
 	
 	return wrote_len;

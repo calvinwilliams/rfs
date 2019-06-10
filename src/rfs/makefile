@@ -12,6 +12,7 @@ c_FILE		=	\
 			main.c \
 			monitor.c \
 			worker.c \
+			comm.c \
 			proto.c \
 
 ###### 目标文件、安装目录配置区

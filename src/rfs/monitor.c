@@ -13,12 +13,6 @@ int monitor( rfs_conf *p_rfs_conf )
 	union semun		semopts ;
 	int			accepting_mutex ;
 	
-	/*
-	socklen_t		accepted_addr_len ;
-	struct sockaddr_in	accepted_addr ;
-	int			accepted_sock ;
-	*/
-	
 	int			nret = 0 ;
 	
 	SetLogcFile( "%s/log/rfs_monitor.log" , getenv("HOME") );
@@ -96,7 +90,7 @@ int monitor( rfs_conf *p_rfs_conf )
 			FATALLOGC( "fork[%d] failed , errno[%d]" , process_index , errno )
 			break;
 		}
-		else if( pid == 0 )
+		else if( a_pids[process_index] == 0 )
 		{
 			INFOLOGC( "fork[%d] ok" , process_index )
 			exit( -worker( p_rfs_conf , process_index , listen_sock , accepting_mutex ) );
@@ -132,7 +126,7 @@ int monitor( rfs_conf *p_rfs_conf )
 				if( pid == a_pids[process_index] )
 					break;
 			}
-			if( process_index >= p_rfs_conf->process_count )
+			if( process_index >= p_rfs_conf->process_model.process_count )
 			{
 				ERRORLOGC( "unknow worker , pid[%d]" , pid )
 				continue;
@@ -146,7 +140,7 @@ int monitor( rfs_conf *p_rfs_conf )
 				FATALLOGC( "fork[%d] failed , errno[%d]" , process_index , errno )
 				break;
 			}
-			else if( pid == 0 )
+			else if( a_pids[process_index] == 0 )
 			{
 				INFOLOGC( "fork[%d] ok" , process_index )
 				exit( -worker( p_rfs_conf , process_index , listen_sock , accepting_mutex ) );
@@ -158,18 +152,6 @@ int monitor( rfs_conf *p_rfs_conf )
 		sleep(1);
 		
 		/*
-		accepted_addr_len = sizeof(struct sockaddr) ;
-		accepted_sock = accept( listen_sock , (struct sockaddr *) & accepted_addr , & accepted_addr_len ) ;
-		if( accepted_sock == -1 )
-		{
-			FATALLOGC( "accept failed , errno[%d]" , errno )
-			break;
-		}
-		else
-		{
-			INFOLOGC( "accept ok" )
-		}
-		
 		pid = fork() ;
 		if( pid == -1 )
 		{
