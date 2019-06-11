@@ -9,6 +9,9 @@
 extern "C" {
 #endif
 
+extern char	g_rfs_conf_filename[ PATH_MAX ] ;
+extern char	g_rfs_conf_main_filename[ PATH_MAX ] ;
+
 struct RemoteFileSession
 {
 	int			accepted_sock ;

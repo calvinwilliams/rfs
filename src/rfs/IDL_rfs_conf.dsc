@@ -5,23 +5,20 @@ STRUCT	rfs_conf
 		INT	4	process_count
 	}
 	
-	STRUCT	node
+	STRUCT	listen
 	{
-		STRING	32	id
-		STRING	32	user
-		STRING	32	pass
-		STRUCT	server
-		{
-			STRING	20	ip
-			INT	4	port
-		}
+		STRING	20	ip
+		INT	4	port
 	}
 	
-	STRUCT	file_system
+	STRUCT	fs
 	{
 		STRING	256	root
 	}
 	
-	STRING	5	log_level
+	STRUCT	log
+	{
+		STRING	5	log_level
+	}
 }
 

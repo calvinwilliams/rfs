@@ -3,55 +3,30 @@
 
 #include "IDL_rfs_api_conf.dsc.h"
 
+#define RFSAPI_CONNECT_SOCK_MAX		8
+
 __thread rfs_api_conf	*g_rfs_api_conf = NULL ;
-__thread int		g_rfs_node_index = -1 ;
+__thread struct pollfd	g_rfs_connect_pollfds[ RFSAPI_CONNECT_SOCK_MAX ] = { 0 } ;
+__thread int		g_rfs_connected_sock_count = 0 ;
 
 static int rloadconfig()
 {
-	char		rfs_api_conf_pathfilename[ PATH_MAX ] ;
-	FILE		*fp = NULL ;
-	long		file_len ;
 	char		*file_content = NULL ;
+	
+	int		i ;
 	
 	int		nret = 0 ;
 	
 	SetLogcFile( "%s/log/rfs_api.log" , getenv("HOME") );
 	SetLogcLevel( LOGCLEVEL_ERROR );
 	
-	memset( rfs_api_conf_pathfilename , 0x00 , sizeof(rfs_api_conf_pathfilename) );
-	snprintf( rfs_api_conf_pathfilename , sizeof(rfs_api_conf_pathfilename)-1 , "%s/etc/rfs_api.conf" , getenv("HOME") );
-	fp = fopen( rfs_api_conf_pathfilename , "r" ) ;
-	if( fp == NULL )
-	{
-		ERRORLOGC( "*** ERROR : Can't open config file[%s] , errno[%d]\n" , rfs_api_conf_pathfilename , errno );
-		return -1;
-	}
-	
-	fseek( fp , 0 , SEEK_END );
-	file_len = ftell( fp ) ;
-	fseek( fp , 0 , SEEK_SET );
-	file_content = (char*)malloc( file_len+1 ) ;
+	file_content = RFSDupFileContent( "%s/etc/rfs_api.conf" , getenv("HOME") ) ;
 	if( file_content == NULL )
 	{
-		ERRORLOGC( "*** ERROR : Alloc failed , errno[%d]\n" , errno );
-		return -1;
-	}
-	memset( file_content , 0x00 , file_len+1 );
-	nret = fread( file_content , file_len , 1 , fp ) ;
-	if( nret != 1 )
-	{
-		ERRORLOGC( "*** ERROR : Read config file[%s] failed , errno[%d]\n" , rfs_api_conf_pathfilename , errno );
-		free( file_content );
-		return -1;
+		printf( "*** ERROR : Can't open config file[%s/etc/rfs_api.conf] , errno[%d]\n" , getenv("HOME") , errno );
+		exit(1);
 	}
 	
-	g_rfs_api_conf = (rfs_api_conf *)malloc( sizeof(rfs_api_conf) ) ;
-	if( g_rfs_api_conf == NULL )
-	{
-		ERRORLOGC( "*** ERROR : Alloc failed , errno[%d]\n" , errno );
-		free( file_content );
-		return -1;
-	}
 	memset( g_rfs_api_conf , 0x00 , sizeof(rfs_api_conf) );
 	nret = DSCDESERIALIZE_JSON_rfs_api_conf( NULL , file_content , NULL , g_rfs_api_conf ) ;
 	if( nret )
@@ -80,41 +55,14 @@ static int rloadconfig()
 	}
 	*/
 	
+	for( i = 0 ; i < RFSAPI_CONNECT_SOCK_MAX ; i++ )
+	{
+		g_rfs_connect_pollfds[i].fd = -1 ;
+	}
+	
+	g_rfs_connected_sock_count = 0 ;
+	
 	SetLogcLevel( LOGCLEVEL_DEBUG );
-	
-	return 0;
-}
-
-static int rselectnode( char *node_id )
-{
-	int		i ;
-	
-	for( i = 0 ; i < g_rfs_api_conf->_nodes_count ; i++ )
-	{
-		if( STRCMP( g_rfs_api_conf->nodes[i].id , == , node_id ) )
-		{
-			g_rfs_node_index = i ;
-			return 0;
-		}
-	}
-	
-	return -1;
-}
-
-int rset( char *node_id )
-{
-	int		nret = 0 ;
-	
-	if( g_rfs_api_conf == NULL )
-	{
-		nret = rloadconfig() ;
-		if( nret )
-			return nret;
-	}
-	
-	nret = rselectnode( node_id ) ;
-	if( nret )
-		return nret;
 	
 	return 0;
 }
@@ -123,35 +71,129 @@ static __thread int			g_remote_fd = -1 ;
 
 static int rconnect()
 {
+	int			i ;
+	struct timeval		elapse ;
+	DEF_TIMEVAL_FOR_DIFF
+	
+	for( i = 0 ; i < g_rfs_api_conf->_node_count ; i++ )
+	{
+		if( g_rfs_connect_pollfds[i].fd == -1 )
+		{
+			struct sockaddr_in	connect_addr ;
+			
+			g_rfs_connect_pollfds[i].fd = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
+			if( g_rfs_connect_pollfds[i].fd == -1 )
+			{
+				ERRORLOGC( "socket failed[%d] , errno[%d]" , g_rfs_connect_pollfds[i].fd , errno )
+				return -1;
+			}
+			
+			RFSSetTcpNonblock( g_rfs_connect_pollfds[i].fd );
+			
+			memset( & connect_addr , 0x00 , sizeof(struct sockaddr_in) );
+			connect_addr.sin_family = AF_INET ;
+			if( g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip[0] == '\0' )
+				connect_addr.sin_addr.s_addr = INADDR_ANY ;
+			else
+				connect_addr.sin_addr.s_addr = inet_addr(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip) ;
+			connect_addr.sin_port = htons( (unsigned short)(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port) );
+			nret = connect( g_rfs_connect_pollfds[i].fd , (struct sockaddr *) & (connect_addr) , sizeof(struct sockaddr) ) ;
+			if( nret == -1 )
+			{
+				if( errno == EINPROGRESS )
+				{
+					g_rfs_connect_pollfds[i].events = POLLOUT ;
+					g_rfs_connect_pollfds[i].revents = 0 ;
+				}
+				else
+				{
+					ERRORLOGC( "connect[%s:%d] failed[%d] , errno[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , nret , errno )
+					return -1;
+				}
+			}
+			else
+			{
+				INFOLOGC( "connect[%s:%d] ok , sock[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , g_rfs_connect_pollfds[i].fd )
+			}
+			
+		}
+		else
+		{
+			g_rfs_connect_pollfds[i].events = 0 ;
+			g_rfs_connect_pollfds[i].revents = 0 ;
+		}
+	}
+	
+	SECONDS_TO_TIMEVAL( 5 , elapse )
+	
+	while(1)
+	{
+		GET_BEGIN_TIMEVAL
+		
+		TIMEVAL_TO_MILLISECONDS( elapse , timeout )
+		nret = poll( & g_rfs_connect_pollfds , g_rfs_api_conf->_node_count , timeout ) ;
+		
+		GET_END_TIMEVAL_AND_DIFF
+		REDUCE_TIMEVAL( elapse , DIFF_TIMEVAL )
+		
+		if( nret == -1 )
+		{
+			FATALLOGC( "poll failed[%d] , errno[%d]" , nret , errno )
+			return -1;
+		}
+		else if( nret == 0 )
+		{
+			for( i = 0 ; i < g_rfs_api_conf->_node_count ; i++ )
+			{
+				if( g_rfs_connect_pollfds[i].events == POLLOUT )
+				{
+					close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
+					g_rfs_connect_pollfds[i].events = 0 ;
+				}
+			}
+			
+			if( g_rfs_connected_sock_count == 0 )
+				return -1;
+			else
+				return 0;
+		}
+		
+		for( i = 0 ; i < g_rfs_api_conf->_node_count ; i++ )
+		{
+			if( g_rfs_connect_pollfds[i].events == POLLOUT )
+			{
+				if( g_rfs_connect_pollfds[i].revents & POLLERR )
+				{
+					int		code , error ;
+					int		addr_len ;
+					
+					addr_len = sizeof(int) ;
+					code = getsockopt( ibma_config_space->alive_report_netaddr.sock , SOL_SOCKET , SO_ERROR , & error , & addr_len ) ;
+					if( code < 0 || ( code == 0 && error ) )
+					{
+						
+					}
+					else
+					{
+						
+					}
+				}
+			}
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	int			connect_sock ;
-	struct sockaddr_in	connect_addr ;
 	
 	int			nret = 0 ;	
-	
-	connect_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
-	if( connect_sock == -1 )
-	{
-		ERRORLOGC( "socket failed[%d] , errno[%d]" , connect_sock , errno )
-		return -1;
-	}
-	
-	memset( & connect_addr , 0x00 , sizeof(struct sockaddr_in) );
-	connect_addr.sin_family = AF_INET ;
-	if( g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip[0] == '\0' )
-		connect_addr.sin_addr.s_addr = INADDR_ANY ;
-	else
-		connect_addr.sin_addr.s_addr = inet_addr(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip) ;
-	connect_addr.sin_port = htons( (unsigned short)(g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port) );
-	nret = connect( connect_sock , (struct sockaddr *) & (connect_addr) , sizeof(struct sockaddr) ) ;
-	if( nret == -1 )
-	{
-		ERRORLOGC( "connect[%s:%d] failed[%d] , errno[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , nret , errno )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "connect[%s:%d] ok , sock[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , connect_sock )
-	}
 	
 	return connect_sock;
 }
@@ -162,6 +204,24 @@ int ropen( char *pathfilename , int flags )
 	int		connect_sock ;
 	
 	int		nret = 0 ;
+	
+	INFOLOGC( "rfs_api v%s" , __RFS_VERSION )
+	
+	if( g_rfs_api_conf == NULL )
+	{
+		nret = rloadconfig() ;
+		if( nret )
+			return nret;
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	connect_sock = rconnect() ;
 	if( connect_sock == -1 )

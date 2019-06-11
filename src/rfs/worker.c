@@ -10,10 +10,10 @@ int worker( rfs_conf *p_rfs_conf , int process_index , int listen_sock , int acc
 	
 	int				nret = 0 ;
 	
-	SetLogcFile( "%s/log/rfs_worker.log" , getenv("HOME") );
-	SetLogcLevel( RFSConvertLogLevelString(p_rfs_conf->log_level) );
+	SetLogcFile( "%s/log/%s_worker.log" , getenv("HOME") , g_rfs_conf_main_filename );
+	SetLogcLevel( RFSConvertLogLevelString(p_rfs_conf->log.log_level) );
 	
-	chdir( p_rfs_conf->file_system.root );
+	chdir( p_rfs_conf->fs.root );
 	
 	while(1)
 	{

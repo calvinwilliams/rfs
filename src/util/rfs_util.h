@@ -16,12 +16,16 @@
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
 
 #include "LOGC.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern char *__RFS_VERSION ;
 
 /* general error */
 
@@ -66,6 +70,11 @@ union semun {
 		(_elapse_).tv_sec--; \
 		(_elapse_).tv_usec += 1000000 ; \
 	} \
+	if( (_elapse_).tv_sec < 0 ) \
+	{ \
+		(_elapse_).tv_sec = 0 ; \
+		(_elapse_).tv_usec = 0 ; \
+	} \
 
 #define DIFF_TIMEVAL	diff_timeval
 
@@ -103,6 +112,19 @@ int RFSReceiveL4VString_DUP( int sock , char **s_buf_ptr , int *p_data_len , str
 /* log */
 
 int RFSConvertLogLevelString( char *log_level_str );
+
+/* file */
+
+char *RFSDupFileContent( char *format , ... );
+
+/* tcp */
+
+void RFSSetTcpReuseAddr( int sock );
+void RFSSetTcpNonblock( int sock );
+void RFSSetTcpBlock( int sock );
+void RFSSetTcpNodelay( int sock , int onoff );
+void RFSSetTcpLinger( int sock , int onoff , int linger );
+void RFSSetTcpCloseExec( int sock );
 
 #ifdef __cplusplus
 }

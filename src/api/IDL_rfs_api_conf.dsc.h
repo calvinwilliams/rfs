@@ -99,19 +99,11 @@ typedef struct
 {
 	struct
 	{
-		char	id[ 32 + 1 ] ;
-		char	user[ 32 + 1 ] ;
-		char	pass[ 32 + 1 ] ;
-		struct
-		{
-			char	ip[ 20 + 1 ] ;
-			int	port ;
-		} servers [ 8 ] ;
-		int	_servers_count ;
-		int	_servers_size ;
-	} nodes [ 16 ] ;
-	int	_nodes_count ;
-	int	_nodes_size ;
+		char	ip[ 20 + 1 ] ;
+		int	port ;
+	} servers [ 8 ] ;
+	int	_servers_count ;
+	int	_servers_size ;
 } rfs_api_conf ;
 
 _WINDLL_FUNC int DSCINIT_rfs_api_conf( rfs_api_conf *pst );

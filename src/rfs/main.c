@@ -1,10 +1,11 @@
 #include "in.h"
 
-int main()
+char	g_rfs_conf_filename[ PATH_MAX ] = "" ;
+char	g_rfs_conf_main_filename[ PATH_MAX ] = "" ;
+
+int main( int argc , char *argv[] )
 {
-	char		rfs_conf_pathfilename[ PATH_MAX ] ;
-	FILE		*fp = NULL ;
-	long		file_len ;
+	int		c ;
 	char		*file_content = NULL ;
 	rfs_conf	rfs_conf ;
 	
@@ -12,31 +13,45 @@ int main()
 	
 	umask(0);
 	
-	memset( rfs_conf_pathfilename , 0x00 , sizeof(rfs_conf_pathfilename) );
-	snprintf( rfs_conf_pathfilename , sizeof(rfs_conf_pathfilename)-1 , "%s/etc/rfs.conf" , getenv("HOME") );
-	fp = fopen( rfs_conf_pathfilename , "r" ) ;
-	if( fp == NULL )
+	for( c = 1 ; c < argc ; c++ )
 	{
-		printf( "*** ERROR : Can't open config file[%s] , errno[%d]\n" , rfs_conf_pathfilename , errno );
-		return 1;
+		if( STRCMP( argv[c] , == , "-v" ) )
+		{
+			printf( "rfs v%s\n" , __RFS_VERSION );
+			exit(0);
+		}
+		else if( STRCMP( argv[c] , == , "-f" ) && c + 1 < argc )
+		{
+			c++;
+			strncpy( g_rfs_conf_filename , argv[c] , sizeof(g_rfs_conf_filename)-1 );
+		}
+		else
+		{
+			printf( "*** ERROR : Command parameter[%s] invalid\n" , argv[c] );
+			exit(7);
+		}
 	}
 	
-	fseek( fp , 0 , SEEK_END );
-	file_len = ftell( fp ) ;
-	fseek( fp , 0 , SEEK_SET );
-	file_content = (char*)malloc( file_len+1 ) ;
+	if( g_rfs_conf_filename[0] == '\0' )
+	{
+		printf( "*** ERROR : Use '-f' set rfs.conf\n" );
+		exit(7);
+	}
+	else
+	{
+		char	*p = NULL ;
+		
+		strcpy( g_rfs_conf_main_filename , g_rfs_conf_filename );
+		p = strchr( g_rfs_conf_main_filename , '.' ) ;
+		if( p )
+			(*p) = '\0' ;
+	}
+	
+	file_content = RFSDupFileContent( g_rfs_conf_filename ) ;
 	if( file_content == NULL )
 	{
-		printf( "*** ERROR : Alloc failed , errno[%d]\n" , errno );
-		return 2;
-	}
-	memset( file_content , 0x00 , file_len+1 );
-	nret = fread( file_content , file_len , 1 , fp ) ;
-	if( nret != 1 )
-	{
-		printf( "*** ERROR : Read config file[%s] failed , errno[%d]\n" , rfs_conf_pathfilename , errno );
-		free( file_content );
-		return 3;
+		printf( "*** ERROR : Can't open config file[%s] , errno[%d]\n" , g_rfs_conf_filename , errno );
+		exit(1);
 	}
 	
 	memset( & rfs_conf , 0x00 , sizeof(rfs_conf) );
@@ -60,74 +75,44 @@ int main()
 		printf( "rfs_conf.process_model.process_count[%d]\n" , rfs_conf.process_model.process_count );
 	}
 	
-	if( rfs_conf.node.id[0] == '\0' )
+	if( rfs_conf.listen.ip[0] == '\0' )
 	{
-		printf( "*** ERROR : rfs_conf.node.id[%s] invalid\n" , rfs_conf.node.id );
+		printf( "*** ERROR : rfs_conf.listen.ip[%s] invalid\n" , rfs_conf.listen.ip );
 		return 5;
 	}
 	else
 	{
-		printf( "node.id[%s]\n" , rfs_conf.node.id );
+		printf( "rfs_conf.listen.ip[%s]\n" , rfs_conf.listen.ip );
 	}
 	
-	if( rfs_conf.node.user[0] == '\0' )
+	if( rfs_conf.listen.port <= 1 )
 	{
-		printf( "*** ERROR : rfs_conf.node.user[%s] invalid\n" , rfs_conf.node.user );
+		printf( "*** ERROR : rfs_conf.listen.port[%d] invalid\n" , rfs_conf.listen.port );
 		return 5;
 	}
 	else
 	{
-		printf( "rfs_conf.node.user[%s]\n" , rfs_conf.node.user );
+		printf( "rfs_conf.listen.port[%d]\n" , rfs_conf.listen.port );
 	}
 	
-	if( rfs_conf.node.pass[0] == '\0' )
+	if( rfs_conf.fs.root[0] == '\0' )
 	{
-		printf( "*** ERROR : rfs_conf.node.pass[%s] invalid\n" , rfs_conf.node.pass );
+		printf( "*** ERROR : rfs_conf.fs.root[%s] invalid\n" , rfs_conf.fs.root );
 		return 5;
 	}
 	else
 	{
-		printf( "rfs_conf.node.pass[%s]\n" , rfs_conf.node.pass );
+		printf( "rfs_conf.fs.root[%s]\n" , rfs_conf.fs.root );
 	}
 	
-	if( rfs_conf.node.server.ip[0] == '\0' )
+	if( RFSConvertLogLevelString(rfs_conf.log.log_level) == LOGCLEVEL_INVALID )
 	{
-		printf( "*** ERROR : rfs_conf.node.server.ip[%s] invalid\n" , rfs_conf.node.server.ip );
+		printf( "*** ERROR : rfs_conf.log.log_level[%s] invalid\n" , rfs_conf.log.log_level );
 		return 5;
 	}
 	else
 	{
-		printf( "rfs_conf.node.server.ip[%s]\n" , rfs_conf.node.server.ip );
-	}
-	
-	if( rfs_conf.node.server.port <= 1 )
-	{
-		printf( "*** ERROR : rfs_conf.node.server.port[%d] invalid\n" , rfs_conf.node.server.port );
-		return 5;
-	}
-	else
-	{
-		printf( "rfs_conf.node.server.port[%d]\n" , rfs_conf.node.server.port );
-	}
-	
-	if( rfs_conf.file_system.root[0] == '\0' )
-	{
-		printf( "*** ERROR : rfs_conf.file_system.root[%s] invalid\n" , rfs_conf.file_system.root );
-		return 5;
-	}
-	else
-	{
-		printf( "rfs_conf.file_system.root[%s]\n" , rfs_conf.file_system.root );
-	}
-	
-	if( RFSConvertLogLevelString(rfs_conf.log_level) == LOGCLEVEL_INVALID )
-	{
-		printf( "*** ERROR : rfs_conf.log_level[%s] invalid\n" , rfs_conf.log_level );
-		return 5;
-	}
-	else
-	{
-		printf( "rfs_conf.log_level[%s]\n" , rfs_conf.log_level );
+		printf( "rfs_conf.log.log_level[%s]\n" , rfs_conf.log.log_level );
 	}
 	
 	return monitor( & rfs_conf );

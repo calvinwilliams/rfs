@@ -15,8 +15,8 @@ int monitor( rfs_conf *p_rfs_conf )
 	
 	int			nret = 0 ;
 	
-	SetLogcFile( "%s/log/rfs_monitor.log" , getenv("HOME") );
-	SetLogcLevel( RFSConvertLogLevelString(p_rfs_conf->log_level) );
+	SetLogcFile( "%s/log/%s_monitor.log" , getenv("HOME") , g_rfs_conf_main_filename );
+	SetLogcLevel( RFSConvertLogLevelString(p_rfs_conf->log.log_level) );
 	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
@@ -27,33 +27,30 @@ int monitor( rfs_conf *p_rfs_conf )
 	
 	memset( & listen_addr , 0x00 , sizeof(struct sockaddr_in) );
 	listen_addr.sin_family = AF_INET ;
-	if( p_rfs_conf->node.server.ip[0] == '\0' )
+	if( p_rfs_conf->listen.ip[0] == '\0' )
 		listen_addr.sin_addr.s_addr = INADDR_ANY ;
 	else
-		listen_addr.sin_addr.s_addr = inet_addr(p_rfs_conf->node.server.ip) ;
-	listen_addr.sin_port = htons( (unsigned short)(p_rfs_conf->node.server.port) );
+		listen_addr.sin_addr.s_addr = inet_addr(p_rfs_conf->listen.ip) ;
+	listen_addr.sin_port = htons( (unsigned short)(p_rfs_conf->listen.port) );
 	nret = bind( listen_sock , (struct sockaddr *) & (listen_addr) , sizeof(struct sockaddr) ) ;
 	if( nret == -1 )
 	{
-		FATALLOGC( "bind[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock , errno )
+		FATALLOGC( "bind[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->listen.ip , p_rfs_conf->listen.port , listen_sock , errno )
 		return -1;
 	}
 	
 	nret = listen( listen_sock , 10240 ) ;
 	if( nret == -1 )
 	{
-		FATALLOGC( "listen[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock , errno )
+		FATALLOGC( "listen[%s:%d][%d] failed , errno[%d]" , p_rfs_conf->listen.ip , p_rfs_conf->listen.port , listen_sock , errno )
 		return -1;
 	}
 	else
 	{
-		INFOLOGC( "listen[%s:%d][%d] ok" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock )
+		INFOLOGC( "listen[%s:%d][%d] ok" , p_rfs_conf->listen.ip , p_rfs_conf->listen.port , listen_sock )
 	}
 	
-	{
-		int	onoff = 1 ;
-		setsockopt( listen_sock , SOL_SOCKET , SO_REUSEADDR , (void *) & onoff , sizeof(int) );
-	}
+	RFSSetTcpReuseAddr( listen_sock );
 	
 	a_pids = (pid_t*)malloc( sizeof(pid_t) * p_rfs_conf->process_model.process_count ) ;
 	if( a_pids == NULL )
@@ -168,7 +165,7 @@ int monitor( rfs_conf *p_rfs_conf )
 	}
 	
 	close( listen_sock );
-	INFOLOGC( "close listen[%s:%d][%d]" , p_rfs_conf->node.server.ip , p_rfs_conf->node.server.port , listen_sock )
+	INFOLOGC( "close listen[%s:%d][%d]" , p_rfs_conf->listen.ip , p_rfs_conf->listen.port , listen_sock )
 	
 	return 0;
 }

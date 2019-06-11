@@ -5,7 +5,7 @@
 #define TEST_RWRITE_TXT	"test_rwrite.txt"
 
 /*
-/home/calvin/rfs_root/ $ rmlog ; find . -name "*.txt" -exec rm -f {} \; -print
+/home/calvin/rfs_root/ $ rmlog ; find . -name "test_r*.txt" -exec rm -f {} \; -print
 */
 
 int main()

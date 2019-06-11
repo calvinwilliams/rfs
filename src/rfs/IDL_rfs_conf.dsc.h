@@ -97,26 +97,23 @@ extern "C" {
 
 typedef struct
 {
-	char	log_level[ 5 + 1 ] ;
 	struct
 	{
 		int	process_count ;
 	} process_model ;
 	struct
 	{
-		char	id[ 32 + 1 ] ;
-		char	user[ 32 + 1 ] ;
-		char	pass[ 32 + 1 ] ;
-		struct
-		{
-			char	ip[ 20 + 1 ] ;
-			int	port ;
-		} server ;
-	} node ;
+		char	ip[ 20 + 1 ] ;
+		int	port ;
+	} listen ;
 	struct
 	{
 		char	root[ 256 + 1 ] ;
-	} file_system ;
+	} fs ;
+	struct
+	{
+		char	log_level[ 5 + 1 ] ;
+	} log ;
 } rfs_conf ;
 
 _WINDLL_FUNC int DSCINIT_rfs_conf( rfs_conf *pst );
