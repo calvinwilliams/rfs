@@ -7,6 +7,7 @@
 
 __thread rfs_api_conf	*g_rfs_api_conf = NULL ;
 __thread struct pollfd	g_rfs_connect_pollfds[ RFSAPI_CONNECT_SOCK_MAX ] = { 0 } ;
+__thread int		g_rfs_connecting_sock_count = 0 ;
 __thread int		g_rfs_connected_sock_count = 0 ;
 
 static int rloadconfig()
@@ -60,6 +61,7 @@ static int rloadconfig()
 		g_rfs_connect_pollfds[i].fd = -1 ;
 	}
 	
+	g_rfs_connecting_sock_count = 0 ;
 	g_rfs_connected_sock_count = 0 ;
 	
 	SetLogcLevel( LOGCLEVEL_DEBUG );
@@ -104,6 +106,7 @@ static int rconnect()
 				{
 					g_rfs_connect_pollfds[i].events = POLLOUT ;
 					g_rfs_connect_pollfds[i].revents = 0 ;
+					g_rfs_connecting_sock_count++;
 				}
 				else
 				{
@@ -114,6 +117,9 @@ static int rconnect()
 			else
 			{
 				INFOLOGC( "connect[%s:%d] ok , sock[%d]" , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].ip , g_rfs_api_conf->nodes[g_rfs_node_index].servers[0].port , g_rfs_connect_pollfds[i].fd )
+				g_rfs_connect_pollfds[i].events = 0 ;
+				g_rfs_connect_pollfds[i].revents = 0 ;
+				g_rfs_connected_sock_count++;
 			}
 			
 		}
@@ -147,12 +153,14 @@ static int rconnect()
 			{
 				if( g_rfs_connect_pollfds[i].events == POLLOUT )
 				{
+					ERRORLOGC( "Close sock[%d] for connecting timeout" , g_rfs_connect_pollfds[i].fd )
 					close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
 					g_rfs_connect_pollfds[i].events = 0 ;
+					g_rfs_connecting_sock_count--;
 				}
 			}
 			
-			if( g_rfs_connected_sock_count == 0 )
+			if( g_rfs_connecting_sock_count == 0 && g_rfs_connected_sock_count == 0 )
 				return -1;
 			else
 				return 0;
@@ -171,37 +179,229 @@ static int rconnect()
 					code = getsockopt( ibma_config_space->alive_report_netaddr.sock , SOL_SOCKET , SO_ERROR , & error , & addr_len ) ;
 					if( code < 0 || ( code == 0 && error ) )
 					{
-						
+						ERRORLOGC( "connect2 failed" )
+						g_rfs_connecting_sock_count--;
 					}
 					else
 					{
-						
+						INFOLOGC( "connect2 ok" )
+						g_rfs_connecting_sock_count--;
+						g_rfs_connected_sock_count++;
 					}
 				}
 			}
 		}
 	}
 	
+	return 0;
+}
+
+static rio( char *send_head , int send_head_len , char *send_body , int send_body_len , char *recv_head[RFSAPI_CONNECT_SOCK_MAX] , int recv_head_len , char *recv_body , int *p_recv_len )
+{
+	int		rfs_io_sock_count ;
+	int		send_head_offset[ RFSAPI_CONNECT_SOCK_MAX ] = { 0 } ;
+	int		recv_head_offset[ RFSAPI_CONNECT_SOCK_MAX ] = { 0 } ;
+	int		send_body_offset[ RFSAPI_CONNECT_SOCK_MAX ] = { 0 } ;
+	int		recv_body_offset[ RFSAPI_CONNECT_SOCK_MAX ] = { 0 } ;
 	
+	int		nret = 0 ;
 	
+	rfs_io_sock_count = g_rfs_connected_sock_count ;
+	while(1)
+	{
+		if( g_rfs_connected_sock_count == 0 )
+		{
+			ERRORLOGC( "No connection" )
+			return -1;
+		}
+		
+		if( rfs_io_sock_count == 0 )
+			break;
+		
+		GET_BEGIN_TIMEVAL
+		
+		TIMEVAL_TO_MILLISECONDS( elapse , timeout )
+		nret = poll( & g_rfs_connect_pollfds , g_rfs_api_conf->_node_count , timeout ) ;
+		
+		GET_END_TIMEVAL_AND_DIFF
+		REDUCE_TIMEVAL( elapse , DIFF_TIMEVAL )
+		
+		if( nret == -1 )
+		{
+			FATALLOGC( "poll failed[%d] , errno[%d]" , nret , errno )
+			return -1;
+		}
+		else if( nret == 0 )
+		{
+			for( i = 0 ; i < g_rfs_api_conf->_node_count ; i++ )
+			{
+				if( g_rfs_connect_pollfds[i].fd != -1 )
+				{
+					ERRORLOGC( "Close sock[%d] for net-io timeout" , g_rfs_connect_pollfds[i].fd )
+					close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
+					g_rfs_connect_pollfds[i].events = 0 ;
+					g_rfs_connected_sock_count--;
+				}
+			}
+			
+			return -1;
+		}
+		
+		for( i = 0 ; i < g_rfs_api_conf->_node_count ; i++ )
+		{
+			if( g_rfs_connect_pollfds[i].fd != -1 )
+			{
+				if( g_rfs_connect_pollfds[i].revents & POLLERR )
+				{
+					ERRORLOGC( "Close sock[%d] for net-io error" , g_rfs_connect_pollfds[i].fd )
+					close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
+					g_rfs_connect_pollfds[i].events = 0 ;
+					g_rfs_connected_sock_count--;
+				}
+				else if( g_rfs_connect_pollfds[i].revents == POLLOUT )
+				{
+					int		wrote_len ;
+					
+					if( send_head_offset[i] < send_head_len )
+					{
+						wrote_len = write( g_rfs_connect_pollfds[i].fd , send_head+send_head_offset[i] , send_head_len-send_head_offset[i] ) ;
+						if( wrote_len == -1 )
+						{
+							if( errno == EAGAIN )
+							{
+								;
+							}
+							else
+							{
+								ERRORLOGC( "write head sock[%d] failed , errno[%d]" , g_rfs_connect_pollfds[i].fd , errno )
+								close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
+								g_rfs_connect_pollfds[i].events = 0 ;
+								g_rfs_connected_sock_count--;
+							}
+						}
+						else
+						{
+							INFOLOGC( "send head [%d]bytes increase [%d]bytes" , send_head_offset[i] , send_head_offset[i]+wrote_len )
+							send_head_offset[i] += wrote_len ;
+							if( send_head_offset[i] == send_head_len )
+							{
+								if( send_body_len == 0 )
+								{
+									INFOLOGC( "send finish" )
+									g_rfs_connect_pollfds[i].events = POLLIN ;
+								}
+							}
+						}
+					}
+					else
+					{
+						wrote_len = write( g_rfs_connect_pollfds[i].fd , send_body+send_body_offset[i] , send_body_len-send_body_offset[i] ) ;
+						if( wrote_len == -1 )
+						{
+							if( errno == EAGAIN )
+							{
+								;
+							}
+							else
+							{
+								ERRORLOGC( "write body sock[%d] failed , errno[%d]" , g_rfs_connect_pollfds[i].fd , errno )
+								close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
+								g_rfs_connect_pollfds[i].events = 0 ;
+								g_rfs_connected_sock_count--;
+							}
+						}
+						else
+						{
+							INFOLOGC( "send body [%d]bytes increase [%d]bytes" , send_body_offset[i] , send_body_offset[i]+wrote_len )
+							send_body_offset[i] += wrote_len ;
+							if( send_body_offset[i] == send_body_len )
+							{
+								INFOLOGC( "send finish" )
+								g_rfs_connect_pollfds[i].events = POLLIN ;
+							}
+						}
+					}
+				}
+				else if( g_rfs_connect_pollfds[i].revents == POLLIN )
+				{
+					int		read_len ;
+					
+					if( recv_head_offset[i] < recv_head_len )
+					{
+						read_len = read( g_rfs_connect_pollfds[i].fd , read_buffer[i]+recv_head_offset[i] , recv_head_len-recv_head_offset[i] ) ;
+						if( read_len == -1 )
+						{
+							if( errno == EAGAIN )
+							{
+								;
+							}
+							else
+							{
+								ERRORLOGC( "read head sock[%d] failed , errno[%d]" , g_rfs_connect_pollfds[i].fd , errno )
+								close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
+								g_rfs_connect_pollfds[i].events = 0 ;
+								g_rfs_connected_sock_count--;
+							}
+						}
+						else
+						{
+							INFOLOGC( "recv head [%d]bytes increase [%d]bytes" , recv_head_offset[i] , recv_head_offset[i]+read_len )
+							recv_head_offset[i] += read_len ;
+							if( recv_head_offset[i] == recv_head_len )
+							{
+								if( p_recv_body_len == NULL || (*p_recv_body_len) == 0 )
+								{
+									INFOLOGC( "recv finish" )
+									rfs_io_sock_count--;
+								}
+							}
+						}
+					}
+					else
+					{
+						read_len = read( g_rfs_connect_pollfds[i].fd , read_body[i]+recv_body_offset[i] , (*p_recv_body_len)-recv_body_offset[i] ) ;
+						if( read_len == -1 )
+						{
+							if( errno == EAGAIN )
+							{
+								;
+							}
+							else
+							{
+								ERRORLOGC( "read body sock[%d] failed , errno[%d]" , g_rfs_connect_pollfds[i].fd , errno )
+								close( g_rfs_connect_pollfds[i].fd ); g_rfs_connect_pollfds[i].fd = -1 ;
+								g_rfs_connect_pollfds[i].events = 0 ;
+								g_rfs_connected_sock_count--;
+							}
+						}
+						else
+						{
+							INFOLOGC( "recv body [%d]bytes increase [%d]bytes" , recv_body_offset[i] , recv_body_offset[i]+read_len )
+							recv_body_offset[i] += read_len ;
+							if( recv_body_offset[i] == (*p_recv_head_len) )
+							{
+								INFOLOGC( "recv finish" )
+								rfs_io_sock_count--;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	
-	
-	
-	
-	
-	
-	
-	int			connect_sock ;
-	
-	int			nret = 0 ;	
-	
-	return connect_sock;
+	return 0;
 }
 
 int ropen( char *pathfilename , int flags )
 {
 	struct timeval	elapse ;
-	int		connect_sock ;
+	uint16_t	pathfilename_len ;
+	uint16_t	pathfilename_len_htons ;
+	uint32_t	flags_htonl ;
+	char		send_head[ 1+1+2+PATH_MAX+4 + 1 ] ;
+	char		*send_ptr = NULL ;
+	char		recv_head[ RFSAPI_CONNECT_SOCK_MAX ][ 4+4 + 1 ] ;
 	
 	int		nret = 0 ;
 	
@@ -214,101 +414,68 @@ int ropen( char *pathfilename , int flags )
 			return nret;
 	}
 	
+	nret = rconnect() ;
+	if( nret )
+		return nret;
 	
+	pathfilename_len=(uint16_t)strlen(pathfilename);
+	if( pathfilename_len > PATH_MAX )
+		return -1;
+	pathfilename_len_htons=htons(pathfilename_len);
+	flags_htonl=htonl((uint32_t)flags);
 	
+	send_ptr = send_head ;
+	(*send_ptr)='O'; send_ptr++;
+	(*send_ptr)='1'; send_ptr++;
+	memcpy(send_ptr,&pathfilename_len_htons,2); send_ptr+=2;
+	memcpy(send_ptr,pathfilename,pathfilename_len); send_ptr+=pathfilename_len;
+	memcpy(send_ptr,flags_htonl,4); send_ptr+=4;
 	
+	for( i = 0 ; i < g_rfs_api_conf->_node_count ; i++ )
+	{
+		if( g_rfs_connect_pollfds[i].fd != -1 )
+		{
+			g_rfs_connect_pollfds[i].events = POLLOUT ;
+			g_rfs_connect_pollfds[i].revents == POLLOUT
+		}
+		
+		memset( recv_head[i] , 0x00 , sizeof(recv_head[i]) );
+	}
 	
+	SECONDS_TO_TIMEVAL( 10 , elapse )
 	
+	rfs_io_sock_count = g_rfs_connected_sock_count ;
 	
-	
-	
-	
-	connect_sock = rconnect() ;
-	if( connect_sock == -1 )
-		return connect_sock;
-	
-	SECONDS_TO_TIMEVAL( 600 , elapse )
-	
-	INFOLOGC( "request open[%s][%d] ..." , pathfilename , flags )
-	
-	nret = RFSSendChar( connect_sock , 'O' , & elapse ) ;
+	nret = rio( send_head , sizeof(send_head)-1 , NULL , -1 , recv_head , sizeof(recv_head)-1 , NULL , NULL ) ;
 	if( nret )
 	{
-		ERRORLOGC( "RFSSendChar command[O] failed[%d]" , nret )
-		return -1;
+		ERRORLOGC( "rio failed[%d]" , nret )
+		return nret;
 	}
 	else
 	{
-		DEBUGLOGC( "RFSSendChar command[O] ok" )
+		INFOLOGC( "rio ok" )
 	}
 	
-	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
-	if( nret )
+	for( i = 0 ; i < g_rfs_api_conf->_node_count ; i++ )
 	{
-		ERRORLOGC( "RFSSendChar version[1] failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSSendChar version[1] ok" )
-	}
-	
-	nret = RFSSendL2VString( connect_sock , pathfilename , strlen(pathfilename) , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendL2VString pathfilename[%s] failed[%d]" , pathfilename , nret )
-		return -1;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSSendL2VString pathfilename[%s] ok" , pathfilename )
+		if( g_rfs_connect_pollfds[i].fd != -1 )
+		{
+			file_fd = ntohl((int*)(recv_head[i])) ;
+			errno = ntohl((int*)(recv_head[i]+4)) ;
+			if( file_fd == -1 )
+			{
+				ERRORLOGC( "[%d] file_fd[%d] errno[%d]" , i , file_id , errno )
+				return -1;
+			}
+			else
+			{
+				INFOLOGC( "[%d] file_fd[%d] errno[%d]" , i , file_id , errno )
+			}
+		}
 	}
 	
-	nret = RFSSendInt4( connect_sock , flags , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendInt4 flags[%d] failed[%d]" , flags , nret )
-		return -1;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSSendInt4 flags[%d] ok" , flags )
-	}
-	
-	nret = RFSReceiveInt4( connect_sock , & g_remote_fd , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveInt4 remote_fd failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSReceiveInt4 remote_fd[%d] ok" , g_remote_fd )
-	}
-	
-	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveInt4 errno failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
-	}
-	
-	if( g_remote_fd == -1 )
-	{
-		ERRORLOGC( "request open[%s][%d] response[%d][%d]" , pathfilename , flags , g_remote_fd , errno )
-		INFOLOGC( "close connect_sock[%d]" , connect_sock )
-		close( connect_sock ); connect_sock = -1 ;
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "request open[%s][%d] response[%d][%d]" , pathfilename , flags , g_remote_fd , errno )
-		return connect_sock;
-	}
+	return 0;
 }
 
 int ropen3( char *pathfilename , int flags , mode_t mode )
