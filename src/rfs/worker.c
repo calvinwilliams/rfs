@@ -58,7 +58,7 @@ int worker( rfs_conf *p_rfs_conf , int process_index , int listen_sock , int acc
 		}
 		else
 		{
-			INFOLOGC( "accept ok" )
+			INFOLOGC( "accept ok , sock[%d]" , accepted_sock )
 		}
 		
 		nret = semop( accepting_mutex , & sembuf , 1 ) ;

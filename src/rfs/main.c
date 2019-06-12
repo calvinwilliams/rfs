@@ -41,7 +41,16 @@ int main( int argc , char *argv[] )
 	{
 		char	*p = NULL ;
 		
-		strcpy( g_rfs_conf_main_filename , g_rfs_conf_filename );
+		p = strrchr( g_rfs_conf_filename , '/' ) ;
+		if( p )
+		{
+			strcpy( g_rfs_conf_main_filename , p );
+		}
+		else
+		{
+			strcpy( g_rfs_conf_main_filename , g_rfs_conf_filename );
+		}
+		
 		p = strchr( g_rfs_conf_main_filename , '.' ) ;
 		if( p )
 			(*p) = '\0' ;

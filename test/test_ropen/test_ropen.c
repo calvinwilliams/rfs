@@ -1,7 +1,5 @@
 #include "rfs_api.h"
 
-#define NODE_ID		"UFT"
-
 #define TEST_ROPEN_TXT	"test_ropen.txt"
 #define TEST_ROPEN3_TXT	"test_ropen3.txt"
 
@@ -12,19 +10,6 @@
 int main()
 {
 	int		fd ;
-	
-	int		nret = 0 ;
-	
-	nret = rset( NODE_ID ) ;
-	if( nret == -1 )
-	{
-		printf( "*** ERROR : rset[%s] failed[%d]\n" , NODE_ID , nret );
-		return 1;
-	}
-	else
-	{
-		printf( "rset[%s] ok\n" , NODE_ID );
-	}
 	
 	fd = ropen( TEST_ROPEN_TXT , O_CREAT|O_EXCL|O_WRONLY ) ;
 	if( fd == -1 )

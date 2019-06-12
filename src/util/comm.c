@@ -1,6 +1,6 @@
 #include "rfs_util.h"
 
-static int RFSSendData( int sock , char *data , uint64_t data_len , uint64_t *p_sent_len , struct timeval *p_elapse )
+int RFSSendData( int sock , char *data , uint64_t data_len , uint64_t *p_sent_len , struct timeval *p_elapse )
 {
 	DEF_TIMEVAL_FOR_DIFF
 	uint64_t		sent_len ;
@@ -65,7 +65,7 @@ static int RFSSendData( int sock , char *data , uint64_t data_len , uint64_t *p_
 	return 0;
 }
 
-static int RFSReceiveData( int sock , char *data , uint64_t data_len , uint64_t *p_received_len , struct timeval *p_elapse )
+int RFSReceiveData( int sock , char *data , uint64_t data_len , uint64_t *p_received_len , struct timeval *p_elapse )
 {
 	DEF_TIMEVAL_FOR_DIFF
 	uint64_t		received_len ;
@@ -326,5 +326,127 @@ int RFSReceiveL4VString_DUP( int sock , char **sg_buf_ptr , int *p_data_len , st
 		(*p_data_len) = data_len ;
 	
 	return 0;
+}
+
+int RFSSendDataVectors( int sock , struct iovec *send_iov , struct iovec **pp_send_iov_ptr , int *p_send_iovcnt , funcAdjustVectors *pfuncAdjustSendVectors , struct timeval *p_elapse )
+{
+	DEF_TIMEVAL_FOR_DIFF
+	ssize_t		len ;
+	
+	GET_BEGIN_TIMEVAL
+	
+	len = writev( sock , (*pp_send_iov_ptr) , (*p_send_iovcnt) ) ;
+	
+	GET_END_TIMEVAL_AND_DIFF
+	REDUCE_TIMEVAL( (*p_elapse) , DIFF_TIMEVAL )
+	
+	if( len == -1 )
+	{
+		if( errno == EAGAIN )
+		{
+			DEBUGLOGC( "writev again" )
+			return 1;
+		}
+		else
+		{
+			ERRORLOGC( "writev failed[%d] , errno[%d]" , len , errno )
+			return -1;
+		}
+	}
+	else if( len == 0 )
+	{
+		ERRORLOGC( "writev none" )
+		return -1;
+	}
+	else
+	{
+		while( len > 0 )
+		{
+			if( len < (*pp_send_iov_ptr)->iov_len )
+			{
+				DEBUGHEXLOGC( (*pp_send_iov_ptr)->iov_base , len , "writev sock[%d] [%d]bytes" , sock , len )
+				(*pp_send_iov_ptr)->iov_len -= len ;
+				(*pp_send_iov_ptr)->iov_base += len ;
+				len = 0 ;
+			}
+			else
+			{
+				DEBUGHEXLOGC( (*pp_send_iov_ptr)->iov_base , (*pp_send_iov_ptr)->iov_len , "writev sock[%d] [%d]bytes" , sock , (*pp_send_iov_ptr)->iov_len )
+				len -= (*pp_send_iov_ptr)->iov_len ;
+				(*pp_send_iov_ptr)->iov_len = 0 ;
+				(*pp_send_iov_ptr)->iov_base = NULL ;
+				(*pp_send_iov_ptr)++;
+				(*p_send_iovcnt)--;
+				if( pfuncAdjustSendVectors )
+					pfuncAdjustSendVectors( send_iov , p_send_iovcnt );
+			}
+		}
+	}
+	
+	if( (*p_send_iovcnt) > 0 )
+		return 1;
+	else
+		return 0;
+}
+
+int RFSReceiveDataVectors( int sock , struct iovec *recv_iov , struct iovec **pp_recv_iov_ptr , int *p_recv_iovcnt , funcAdjustVectors *pfuncAdjustReceiveVectors , struct timeval *p_elapse )
+{
+	DEF_TIMEVAL_FOR_DIFF
+	ssize_t		len ;
+	
+	GET_BEGIN_TIMEVAL
+	
+	len = readv( sock , (*pp_recv_iov_ptr) , (*p_recv_iovcnt) ) ;
+	
+	GET_END_TIMEVAL_AND_DIFF
+	REDUCE_TIMEVAL( (*p_elapse) , DIFF_TIMEVAL )
+	
+	if( len == -1 )
+	{
+		if( errno == EAGAIN )
+		{
+			DEBUGLOGC( "readv again" )
+			return 1;
+		}
+		else
+		{
+			ERRORLOGC( "readv failed[%d] , errno[%d]" , len , errno )
+			return -1;
+		}
+	}
+	else if( len == 0 )
+	{
+		ERRORLOGC( "readv none" )
+		return -1;
+	}
+	else
+	{
+		while( len > 0 )
+		{
+			if( len < (*pp_recv_iov_ptr)->iov_len )
+			{
+				DEBUGHEXLOGC( (*pp_recv_iov_ptr)->iov_base , len , "readv sock[%d] [%d]bytes" , sock , len )
+				(*pp_recv_iov_ptr)->iov_len -= len ;
+				(*pp_recv_iov_ptr)->iov_base += len ;
+				len = 0 ;
+			}
+			else
+			{
+				DEBUGHEXLOGC( (*pp_recv_iov_ptr)->iov_base , (*pp_recv_iov_ptr)->iov_len , "readv sock[%d] [%d]bytes" , sock , (*pp_recv_iov_ptr)->iov_len )
+				len -= (*pp_recv_iov_ptr)->iov_len ;
+				(*pp_recv_iov_ptr)->iov_len = 0 ;
+				(*pp_recv_iov_ptr)->iov_base = NULL ;
+				(*pp_recv_iov_ptr)++;
+				(*p_recv_iovcnt)--;
+				if( pfuncAdjustReceiveVectors )
+					pfuncAdjustReceiveVectors( recv_iov , p_recv_iovcnt );
+			}
+		}
+	}
+	
+	if( (*p_recv_iovcnt) > 0 )
+		return 1;
+	else
+		return 0;
 }
 

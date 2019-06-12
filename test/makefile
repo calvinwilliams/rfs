@@ -7,7 +7,6 @@
 
 ###### ×ÓÄ¿Â¼ÅäÖÃÇø
 DIROBJS		= \
-			test_rset \
 			test_ropen \
 			test_rwrite \
 			test_rread \
