@@ -18,17 +18,6 @@ int main()
 	
 	int		nret = 0 ;
 	
-	nret = rset( NODE_ID ) ;
-	if( nret == -1 )
-	{
-		printf( "*** ERROR : rset[%s] failed[%d]\n" , NODE_ID , nret );
-		return 1;
-	}
-	else
-	{
-		printf( "rset[%s] ok\n" , NODE_ID );
-	}
-	
 	fd = ropen3( TEST_RWRITE_TXT , O_CREAT|O_APPEND|O_WRONLY , 0666 ) ;
 	if( fd == -1 )
 	{

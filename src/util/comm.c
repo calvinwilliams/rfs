@@ -374,11 +374,11 @@ int RFSSendDataVectors( int sock , struct iovec *send_iov , struct iovec **pp_se
 				DEBUGHEXLOGC( (*pp_send_iov_ptr)->iov_base , (*pp_send_iov_ptr)->iov_len , "writev sock[%d] [%d]bytes" , sock , (*pp_send_iov_ptr)->iov_len )
 				len -= (*pp_send_iov_ptr)->iov_len ;
 				(*pp_send_iov_ptr)->iov_len = 0 ;
-				(*pp_send_iov_ptr)->iov_base = NULL ;
+				// (*pp_send_iov_ptr)->iov_base = NULL ;
 				(*pp_send_iov_ptr)++;
 				(*p_send_iovcnt)--;
 				if( pfuncAdjustSendVectors )
-					pfuncAdjustSendVectors( send_iov , p_send_iovcnt );
+					pfuncAdjustSendVectors( send_iov , pp_send_iov_ptr , p_send_iovcnt );
 			}
 		}
 	}
@@ -435,11 +435,11 @@ int RFSReceiveDataVectors( int sock , struct iovec *recv_iov , struct iovec **pp
 				DEBUGHEXLOGC( (*pp_recv_iov_ptr)->iov_base , (*pp_recv_iov_ptr)->iov_len , "readv sock[%d] [%d]bytes" , sock , (*pp_recv_iov_ptr)->iov_len )
 				len -= (*pp_recv_iov_ptr)->iov_len ;
 				(*pp_recv_iov_ptr)->iov_len = 0 ;
-				(*pp_recv_iov_ptr)->iov_base = NULL ;
+				// (*pp_recv_iov_ptr)->iov_base = NULL ;
 				(*pp_recv_iov_ptr)++;
 				(*p_recv_iovcnt)--;
 				if( pfuncAdjustReceiveVectors )
-					pfuncAdjustReceiveVectors( recv_iov , p_recv_iovcnt );
+					pfuncAdjustReceiveVectors( recv_iov , pp_recv_iov_ptr , p_recv_iovcnt );
 			}
 		}
 	}
