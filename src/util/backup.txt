@@ -1,0 +1,25 @@
+	int				epoll_fd ;
+	struct epoll_event		event ;
+	struct epoll_event		events[ EPOLL_EVENT_COUNT ] ;
+	struct epoll_event		*p_event = NULL ;
+	
+	struct ListenSession		listen_session ;
+	
+	epoll_fd = epoll_create( 1024 ) ;
+	if( epoll_fd == -1 )
+	{
+		FATALLOGC( "epoll_create failed , errno[%d]" , errno )
+		return -1;
+	}
+	
+	listen_session.listen_sock = listen_sock ;
+	
+	memset( & event , 0x00 , sizeof(struct epoll_event) );
+	event.events = EPOLLIN ;
+	event.data.ptr = & listen_session ;
+	nret = epoll_ctl( epoll_fd , EPOLL_CTL_ADD , listen_sock , & event ) ;
+	if( nret == -1 )
+	{
+		FATALLOGC( "epoll_ctl listen socket failed , errno[%d]" , errno )
+		return -1;
+	}
