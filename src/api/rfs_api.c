@@ -73,6 +73,28 @@ static int rloadconfig()
 	return 0;
 }
 
+static void rdisconnect( int rfd )
+{
+	int		i ;
+	
+	if( rfd < 0 )
+		return;
+	if( g_rfs_open_handle[rfd].unit_enable != 1 )
+		return;
+	
+	for( i = 0 ; i < g_p_rfs_api_conf->_servers_count ; i++ )
+	{
+		if( g_rfs_open_handle[rfd].connect_pollfds[i].fd != -1 )
+		{
+			INFOLOGC( "close sock[%d]" , g_rfs_open_handle[rfd].connect_pollfds[i].fd )
+			close( g_rfs_open_handle[rfd].connect_pollfds[i].fd ); g_rfs_open_handle[rfd].connect_pollfds[i].fd = -1 ;
+			g_rfs_open_handle[rfd].connected_sock_count--;
+		}
+	}
+	
+	return;
+}
+
 static int rconnect()
 {
 	int			rfd ;
@@ -106,6 +128,9 @@ static int rconnect()
 		{
 			struct sockaddr_in	connect_addr ;
 			
+			g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
+			g_rfs_open_handle[rfd].connect_pollfds[i].revents = 0 ;
+			
 			g_rfs_open_handle[rfd].connect_pollfds[i].fd = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 			if( g_rfs_open_handle[rfd].connect_pollfds[i].fd == -1 )
 			{
@@ -132,7 +157,6 @@ static int rconnect()
 				if( errno == EINPROGRESS )
 				{
 					g_rfs_open_handle[rfd].connect_pollfds[i].events = POLLOUT ;
-					g_rfs_open_handle[rfd].connect_pollfds[i].revents = 0 ;
 					g_rfs_open_handle[rfd].connecting_sock_count++;
 					INFOLOGC( "connect[%s:%d] sock[%d] progressing" , g_p_rfs_api_conf->servers[i].ip , g_p_rfs_api_conf->servers[i].port , g_rfs_open_handle[rfd].connect_pollfds[i].fd )
 				}
@@ -145,16 +169,9 @@ static int rconnect()
 			else
 			{
 				INFOLOGC( "connect[%s:%d] sock[%d] ok" , g_p_rfs_api_conf->servers[i].ip , g_p_rfs_api_conf->servers[i].port , g_rfs_open_handle[rfd].connect_pollfds[i].fd )
-				g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
-				g_rfs_open_handle[rfd].connect_pollfds[i].revents = 0 ;
 				g_rfs_open_handle[rfd].connected_sock_count++;
 			}
 			
-		}
-		else
-		{
-			g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
-			g_rfs_open_handle[rfd].connect_pollfds[i].revents = 0 ;
 		}
 	}
 	
@@ -187,7 +204,6 @@ static int rconnect()
 				{
 					ERRORLOGC( "close sock[%d] for connecting timeout" , g_rfs_open_handle[rfd].connect_pollfds[i].fd )
 					close( g_rfs_open_handle[rfd].connect_pollfds[i].fd ); g_rfs_open_handle[rfd].connect_pollfds[i].fd = -1 ;
-					g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
 					g_rfs_open_handle[rfd].connecting_sock_count--;
 				}
 			}
@@ -210,7 +226,6 @@ static int rconnect()
 				{
 					ERRORLOGC( "close sock[%d] for connecting error" , g_rfs_open_handle[rfd].connect_pollfds[i].fd )
 					close( g_rfs_open_handle[rfd].connect_pollfds[i].fd ); g_rfs_open_handle[rfd].connect_pollfds[i].fd = -1 ;
-					g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
 					g_rfs_open_handle[rfd].connecting_sock_count--;
 				}
 				else if( g_rfs_open_handle[rfd].connect_pollfds[i].revents & POLLOUT )
@@ -300,17 +315,8 @@ static int rio( int rfd , struct riovec *p_riovec , struct timeval *p_elapse )
 		}
 		else if( nret == 0 )
 		{
-			for( i = 0 ; i < g_p_rfs_api_conf->_servers_count ; i++ )
-			{
-				if( g_rfs_open_handle[rfd].connect_pollfds[i].fd != -1 )
-				{
-					ERRORLOGC( "close sock[%d][%d] for net-io timeout" , rfd , g_rfs_open_handle[rfd].connect_pollfds[i].fd )
-					close( g_rfs_open_handle[rfd].connect_pollfds[i].fd ); g_rfs_open_handle[rfd].connect_pollfds[i].fd = -1 ;
-					g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
-					g_rfs_open_handle[rfd].connected_sock_count--;
-				}
-			}
-			
+			ERRORLOGC( "close rfd[%d] for net-io timeout" , rfd )
+			rdisconnect( rfd );
 			return -1;
 		}
 		
@@ -322,7 +328,6 @@ static int rio( int rfd , struct riovec *p_riovec , struct timeval *p_elapse )
 				{
 					ERRORLOGC( "close sock[%d][%d] for net-io error" , rfd , g_rfs_open_handle[rfd].connect_pollfds[i].fd )
 					close( g_rfs_open_handle[rfd].connect_pollfds[i].fd ); g_rfs_open_handle[rfd].connect_pollfds[i].fd = -1 ;
-					g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
 					g_rfs_open_handle[rfd].connected_sock_count--;
 				}
 				else if( g_rfs_open_handle[rfd].connect_pollfds[i].revents == POLLOUT )
@@ -336,7 +341,6 @@ static int rio( int rfd , struct riovec *p_riovec , struct timeval *p_elapse )
 					{
 						ERRORLOGC( "send sock[%d][%d] failed , errno[%d]" , rfd , g_rfs_open_handle[rfd].connect_pollfds[i].fd , errno )
 						close( g_rfs_open_handle[rfd].connect_pollfds[i].fd ); g_rfs_open_handle[rfd].connect_pollfds[i].fd = -1 ;
-						g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
 						g_rfs_open_handle[rfd].connected_sock_count--;
 					}
 					else if( nret == 0 )
@@ -356,7 +360,6 @@ static int rio( int rfd , struct riovec *p_riovec , struct timeval *p_elapse )
 					{
 						ERRORLOGC( "recv sock[%d][%d] failed , errno[%d]" , rfd , g_rfs_open_handle[rfd].connect_pollfds[i].fd , errno )
 						close( g_rfs_open_handle[rfd].connect_pollfds[i].fd ); g_rfs_open_handle[rfd].connect_pollfds[i].fd = -1 ;
-						g_rfs_open_handle[rfd].connect_pollfds[i].events = 0 ;
 						g_rfs_open_handle[rfd].connected_sock_count--;
 					}
 					else if( nret == 0 )
@@ -742,98 +745,6 @@ ssize_t rread( int rfd , void *buf , size_t count_h )
 	INFOLOGC( "--- rfs_api v%s --- rread[%d][0x%X][%d] return[%d]" , __RFS_VERSION , rfd , buf , count_h , max_read_len )
 	
 	return max_read_len;
-	
-#if 0
-	struct timeval	elapse ;
-	int		read_len ;
-	
-	int		nret = 0 ;
-	
-	if( connect_sock < 0 )
-		return -1;
-	
-	SECONDS_TO_TIMEVAL( 600 , elapse )
-	
-	INFOLOGC( "request read[%d][0x%X][%d]" , connect_sock , buf , count )
-	
-	nret = RFSSendChar( connect_sock , 'R' , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendChar command[R] failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendChar command[R] ok" )
-	}
-	
-	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendChar version[1] failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendChar version[1] ok" )
-	}
-	
-	nret = RFSSendInt4( connect_sock , g_remote_file_fd , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendInt4 fd[%d] failed[%d]" , g_remote_file_fd , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendInt4 fd[%d] ok" , g_remote_file_fd )
-	}
-	
-	nret = RFSSendInt4( connect_sock , count , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendInt4 count[%d] failed[%d]" , count , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendInt4 count[%d] ok" , g_remote_file_fd )
-	}
-	
-	nret = RFSReceiveL4VString( connect_sock , buf , & read_len , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveL4VString read_len failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSReceiveInt4 read_len[%d] ok" , read_len )
-		DEBUGHEXLOGC( buf , read_len , "read_len[%d]bytes" , read_len )
-	}
-	
-	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveInt4 errno failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
-	}
-	
-	if( read_len == -1 )
-	{
-		ERRORLOGC( "request read[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , read_len , errno )
-	}
-	else
-	{
-		INFOLOGC( "request read[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , read_len , errno )
-	}
-	
-	return (ssize_t)read_len;
-#endif
 }
 
 ssize_t rwrite( int rfd , char *buf , size_t count_h )
@@ -905,98 +816,6 @@ ssize_t rwrite( int rfd , char *buf , size_t count_h )
 	INFOLOGC( "--- rfs_api v%s --- rwrite[%d][0x%X][%d] return[%d]" , __RFS_VERSION , rfd , buf , count_h , max_wrote_len )
 	
 	return max_wrote_len;
-	
-#if 0
-	struct timeval	elapse ;
-	int		wrote_len ;
-	
-	int		nret = 0 ;
-	
-	if( connect_sock < 0 )
-		return -1;
-	
-	SECONDS_TO_TIMEVAL( 600 , elapse )
-	
-	INFOLOGC( "request write[%d][0x%X][%d]" , connect_sock , buf , count )
-	
-	nret = RFSSendChar( connect_sock , 'W' , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendChar command[W] failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendChar command[W] ok" )
-	}
-	
-	nret = RFSSendChar( connect_sock , '1' , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendChar version[1] failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendChar version[1] ok" )
-	}
-	
-	nret = RFSSendInt4( connect_sock , g_remote_file_fd , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendInt4 fd[%d] failed[%d]" , g_remote_file_fd , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendInt4 fd[%d] ok" , g_remote_file_fd )
-	}
-	
-	nret = RFSSendL4VString( connect_sock , buf , count , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendL4VString data_len failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSSendL4VString data_len ok" )
-		DEBUGHEXLOGC( buf , count , "data_len[%d]bytes" , count )
-	}
-	
-	nret = RFSReceiveInt4( connect_sock , & wrote_len , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveInt4 wrote_len failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSReceiveInt4 wrote_len[%d] ok" , wrote_len )
-	}
-	
-	nret = RFSReceiveInt4( connect_sock , & errno , & elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveInt4 errno failed[%d]" , nret )
-		return -1;
-	}
-	else
-	{
-		INFOLOGC( "RFSReceiveInt4 errno[%d] ok" , errno )
-	}
-	
-	if( wrote_len == -1 )
-	{
-		ERRORLOGC( "request write[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , wrote_len , errno )
-	}
-	else
-	{
-		INFOLOGC( "request write[%d][0x%X][%d] response[%d][%d]" , connect_sock , buf , count , wrote_len , errno )
-	}
-	
-	return wrote_len;
-#endif
 }
 
 FILE *rfopen( char *pathfilename , char *mode )
