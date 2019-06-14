@@ -56,7 +56,7 @@ int main( int argc , char *argv[] )
 			(*p) = '\0' ;
 	}
 	
-	file_content = RFSDupFileContent( g_rfs_conf_filename ) ;
+	file_content = RFSDupFileContent( NULL , g_rfs_conf_filename ) ;
 	if( file_content == NULL )
 	{
 		printf( "*** ERROR : Can't open config file[%s] , errno[%d]\n" , g_rfs_conf_filename , errno );

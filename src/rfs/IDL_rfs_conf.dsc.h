@@ -99,6 +99,10 @@ typedef struct
 {
 	struct
 	{
+		char	log_level[ 5 + 1 ] ;
+	} log ;
+	struct
+	{
 		int	process_count ;
 	} process_model ;
 	struct
@@ -110,10 +114,6 @@ typedef struct
 	{
 		char	root[ 256 + 1 ] ;
 	} fs ;
-	struct
-	{
-		char	log_level[ 5 + 1 ] ;
-	} log ;
 } rfs_conf ;
 
 _WINDLL_FUNC int DSCINIT_rfs_conf( rfs_conf *pst );

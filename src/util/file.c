@@ -1,12 +1,12 @@
 #include "rfs_util.h"
 
-char *RFSDupFileContent( char *format , ... )
+char *RFSDupFileContent( int *p_fd , char *format , ... )
 {
 	char		pathfilename[ PATH_MAX ] ;
-	va_list		valist ;
 	int		pathfilename_len ;
-	FILE		*fp = NULL ;
-	ssize_t		file_len ;
+	va_list		valist ;
+	int		fd ;
+	int		file_len ;
 	char		*file_content = NULL ;
 	size_t		read_len ;
 	
@@ -17,21 +17,30 @@ char *RFSDupFileContent( char *format , ... )
 	if( pathfilename_len == -1 || pathfilename_len >= sizeof(pathfilename)-1 )
 		return NULL;
 	
-	fp = fopen( pathfilename , "rb" ) ;
-	if( fp == NULL )
+	fd = open( pathfilename , O_RDONLY ) ;
+	if( fd == -1 )
 		return NULL;
 	
-	fseek( fp , 0 , SEEK_END );
-	file_len = ftell( fp ) ;
-	fseek( fp , 0 , SEEK_SET );
+	file_len = (int)lseek( fd , 0 , SEEK_END );
+	lseek( fd , 0 , SEEK_SET );
 	file_content = (char*)malloc( file_len+1 ) ;
 	if( file_content == NULL )
+	{
+		close( fd );
 		return NULL;
+	}
 	memset( file_content , 0x00 , file_len+1 );
-	read_len = fread( file_content , file_len , 1 , fp ) ;
+	read_len = read( fd , file_content , file_len ) ;
 	if( read_len != 1 )
+	{
+		close( fd );
 		return NULL;
+	}
 	
+	if( p_fd )
+		(*p_fd) = fd ;
+	else
+		close( fd );
 	return file_content;
 }
 
