@@ -147,21 +147,6 @@ int monitor( rfs_conf *p_rfs_conf )
 		INFOLOGC( "no more workers exit" )
 		
 		sleep(1);
-		
-		/*
-		pid = fork() ;
-		if( pid == -1 )
-		{
-			FATALLOGC( "fork failed , errno[%d]" , errno )
-			break;
-		}
-		else if( pid == 0 )
-		{
-			exit( -worker( p_rfs_conf , accepted_sock , & accepted_addr ) );
-		}
-		
-		close( accepted_sock );
-		*/
 	}
 	
 	close( listen_sock );

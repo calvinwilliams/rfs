@@ -126,7 +126,7 @@ int RFSConvertLogLevelString( char *log_level_str );
 
 /* file */
 
-char *RFSDupFileContent( int *p_fd , char *format , ... );
+int RFSDupFileContent( int *p_fd , char **pp_file_content , char *format , ... );
 
 /* tcp */
 

@@ -1,6 +1,6 @@
 #include "rfs_util.h"
 
-char *RFSDupFileContent( int *p_fd , char *format , ... )
+int RFSDupFileContent( int *p_fd , char **pp_file_content , char *format , ... )
 {
 	char		pathfilename[ PATH_MAX ] ;
 	int		pathfilename_len ;
@@ -15,11 +15,11 @@ char *RFSDupFileContent( int *p_fd , char *format , ... )
 	pathfilename_len = vsnprintf( pathfilename , sizeof(pathfilename)-1 , format , valist ) ;
 	va_end( valist );
 	if( pathfilename_len == -1 || pathfilename_len >= sizeof(pathfilename)-1 )
-		return NULL;
+		return -1;
 	
 	fd = open( pathfilename , O_RDONLY ) ;
 	if( fd == -1 )
-		return NULL;
+		return -2;
 	
 	file_len = (int)lseek( fd , 0 , SEEK_END );
 	lseek( fd , 0 , SEEK_SET );
@@ -27,20 +27,22 @@ char *RFSDupFileContent( int *p_fd , char *format , ... )
 	if( file_content == NULL )
 	{
 		close( fd );
-		return NULL;
+		return -3;
 	}
 	memset( file_content , 0x00 , file_len+1 );
 	read_len = read( fd , file_content , file_len ) ;
-	if( read_len != 1 )
+	if( read_len == -1 )
 	{
 		close( fd );
-		return NULL;
+		return -4;
 	}
 	
 	if( p_fd )
 		(*p_fd) = fd ;
 	else
 		close( fd );
-	return file_content;
+	if( pp_file_content )
+		(*pp_file_content) = file_content ;
+	return 0;
 }
 
