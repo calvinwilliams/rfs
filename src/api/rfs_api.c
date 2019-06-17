@@ -374,7 +374,10 @@ static int rio( struct RemoteFd *p_remote_fd , struct riovec *p_riovec , struct 
 				}
 				else if( g_connect_pollfds[i].revents == POLLOUT )
 				{
-					nret = RFSSendDataVectors( g_connect_pollfds[i].fd , p_riovec->send_iov[i] , & (p_riovec->p_send_iov_ptr[i]) , & (p_riovec->send_iovcnt[i]) , p_riovec->pfuncAdjustSendVectors , p_elapse ) ;
+					if( p_riovec->send_iovcnt[i] > 0 )
+						nret = RFSSendDataVectors( g_connect_pollfds[i].fd , p_riovec->send_iov[i] , & (p_riovec->p_send_iov_ptr[i]) , & (p_riovec->send_iovcnt[i]) , p_riovec->pfuncAdjustSendVectors , p_elapse ) ;
+					else
+						nret = 0 ;
 					if( nret == 1 )
 					{
 						DEBUGLOGC( "send sock[%d] again" , g_connect_pollfds[i].fd )
@@ -394,7 +397,10 @@ static int rio( struct RemoteFd *p_remote_fd , struct riovec *p_riovec , struct 
 				}
 				else if( g_connect_pollfds[i].revents == POLLIN )
 				{
-					nret = RFSReceiveDataVectors( g_connect_pollfds[i].fd , p_riovec->recv_iov[i] , & (p_riovec->p_recv_iov_ptr[i]) , & (p_riovec->recv_iovcnt[i]) , p_riovec->pfuncAdjustReceiveVectors , p_elapse ) ;
+					if( p_riovec->recv_iovcnt[i] > 0 )
+						nret = RFSReceiveDataVectors( g_connect_pollfds[i].fd , p_riovec->recv_iov[i] , & (p_riovec->p_recv_iov_ptr[i]) , & (p_riovec->recv_iovcnt[i]) , p_riovec->pfuncAdjustReceiveVectors , p_elapse ) ;
+					else
+						nret = 0 ;
 					if( nret == 1 )
 					{
 						DEBUGLOGC( "recv sock[%d] again" , g_connect_pollfds[i].fd )
@@ -482,6 +488,8 @@ int ropen( char *pathfilename , int flags_h )
 			riovec.recv_iov[i][1].iov_base = & (errno_n[i]) ; riovec.recv_iov[i][1].iov_len = 4 ;
 			riovec.recv_iovcnt[i] = 2 ;
 			riovec.p_recv_iov_ptr[i] = riovec.recv_iov[i] ;
+			
+			INFOLOGC( "ready remote call open[%s][%d]" , pathfilename , flags_h )
 		}
 	}
 	riovec.pfuncAdjustSendVectors = NULL ;
@@ -615,6 +623,8 @@ int ropen3( char *pathfilename , int flags_h , mode_t mode_h )
 			riovec.recv_iov[i][1].iov_base = & (errno_n[i]) ; riovec.recv_iov[i][1].iov_len = 4 ;
 			riovec.recv_iovcnt[i] = 2 ;
 			riovec.p_recv_iov_ptr[i] = riovec.recv_iov[i] ;
+			
+			INFOLOGC( "ready remote call open[%s][%d][%d]" , pathfilename , flags_h , mode_h )
 		}
 	}
 	riovec.pfuncAdjustSendVectors = NULL ;
@@ -739,17 +749,30 @@ int rclose( int fd )
 	{
 		if( g_connect_pollfds[i].fd != -1 && g_is_connected[i] == 1 )
 		{
-			riovec.send_iov[i][0].iov_base = "C" ; riovec.send_iov[i][0].iov_len = 1 ;
-			riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
-			remote_fd_n[i]=htonl((uint32_t)(p_remote_fd->remote_fd[i]));
-			riovec.send_iov[i][2].iov_base = & (remote_fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
-			riovec.p_send_iov_ptr[i] = riovec.send_iov[i] ;
-			riovec.send_iovcnt[i] = 3 ;
-			
-			riovec.recv_iov[i][0].iov_base = & (ret_n[i]) ; riovec.recv_iov[i][0].iov_len = 4 ;
-			riovec.recv_iov[i][1].iov_base = & (errno_n[i]) ; riovec.recv_iov[i][1].iov_len = 4 ;
-			riovec.p_recv_iov_ptr[i] = riovec.recv_iov[i] ;
-			riovec.recv_iovcnt[i] = 2 ;
+			if( p_remote_fd->remote_fd[i] != -1 )
+			{
+				riovec.send_iov[i][0].iov_base = "C" ; riovec.send_iov[i][0].iov_len = 1 ;
+				riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
+				remote_fd_n[i]=htonl((uint32_t)(p_remote_fd->remote_fd[i]));
+				riovec.send_iov[i][2].iov_base = & (remote_fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
+				riovec.p_send_iov_ptr[i] = riovec.send_iov[i] ;
+				riovec.send_iovcnt[i] = 3 ;
+				
+				riovec.recv_iov[i][0].iov_base = & (ret_n[i]) ; riovec.recv_iov[i][0].iov_len = 4 ;
+				riovec.recv_iov[i][1].iov_base = & (errno_n[i]) ; riovec.recv_iov[i][1].iov_len = 4 ;
+				riovec.p_recv_iov_ptr[i] = riovec.recv_iov[i] ;
+				riovec.recv_iovcnt[i] = 2 ;
+				
+				INFOLOGC( "ready remote call close[%d]" , p_remote_fd->remote_fd[i] )
+			}
+			else
+			{
+				riovec.p_send_iov_ptr[i] = NULL ;
+				riovec.send_iovcnt[i] = 0 ;
+				
+				riovec.p_recv_iov_ptr[i] = NULL ;
+				riovec.recv_iovcnt[i] = 0 ;
+			}
 		}
 	}
 	riovec.pfuncAdjustSendVectors = NULL ;
@@ -771,17 +794,20 @@ int rclose( int fd )
 	{
 		if( g_connect_pollfds[i].fd != -1 && g_is_connected[i] == 1 )
 		{
-			ret_h = ntohl((uint32_t)(ret_n[i])) ;
-			errno_h = ntohl((uint32_t)(errno_n[i])) ;
-			if( errno == 0 && errno_h != 0 )
-				errno = errno_h ;
-			if( ret_h == -1 )
+			if( p_remote_fd->remote_fd[i] != -1 )
 			{
-				ERRORLOGC( "[%d] ret[%d] errno[%d]" , i , ret_h , errno_h )
-			}
-			else
-			{
-				INFOLOGC( "[%d] ret[%d] errno[%d]" , i , ret_h , errno_h )
+				ret_h = ntohl((uint32_t)(ret_n[i])) ;
+				errno_h = ntohl((uint32_t)(errno_n[i])) ;
+				if( errno == 0 && errno_h != 0 )
+					errno = errno_h ;
+				if( ret_h == -1 )
+				{
+					ERRORLOGC( "[%d] ret[%d] errno[%d]" , i , ret_h , errno_h )
+				}
+				else
+				{
+					INFOLOGC( "[%d] ret[%d] errno[%d]" , i , ret_h , errno_h )
+				}
 			}
 		}
 	}
@@ -794,8 +820,6 @@ int rclose( int fd )
 	return 0;
 }
 
-#if 0
-
 static funcAdjustVectors AdjustVectors_rread ;
 void AdjustVectors_rread( struct iovec *recv_iov , struct iovec **pp_recv_iov_ptr , int *p_recv_iovcnt )
 {
@@ -803,9 +827,11 @@ void AdjustVectors_rread( struct iovec *recv_iov , struct iovec **pp_recv_iov_pt
 	{
 		uint32_t	*p_read_len_n = (uint32_t*)(recv_iov[0].iov_base) ;
 		uint32_t	read_len_h = ntohl(*p_read_len_n) ;
+		
 		DEBUGLOGC( "set recv_iov[1].iov_len[%d] -> [%d]" , recv_iov[1].iov_len , read_len_h )
 		(*pp_recv_iov_ptr)->iov_len = read_len_h ;
-		DEBUGLOGC( "(*pp_recv_iov_ptr)->iov_len[%d]" , (*pp_recv_iov_ptr)->iov_len )
+		
+		DEBUGLOGC( "set (*p_recv_iovcnt)[%d] -> [%d]" , (*p_recv_iovcnt) , 2 )
 		(*p_recv_iovcnt) = 2 ;
 	}
 	
@@ -814,12 +840,14 @@ void AdjustVectors_rread( struct iovec *recv_iov , struct iovec **pp_recv_iov_pt
 
 ssize_t rread( int fd , void *buf , size_t count_h )
 {
+	struct RemoteFd	remote_fd , *p_remote_fd = NULL ;
 	int		fd_n[RFSAPI_CONNECT_SOCK_MAX] ;
 	int		count_n[RFSAPI_CONNECT_SOCK_MAX] ;
 	int		read_len_n[RFSAPI_CONNECT_SOCK_MAX] ;
 	int		read_len_h[RFSAPI_CONNECT_SOCK_MAX] ;
 	ssize_t		max_read_len ;
 	uint32_t	errno_n[RFSAPI_CONNECT_SOCK_MAX] ;
+	int		errno_h ;
 	struct riovec	riovec ;
 	int		i ;
 	struct timeval	elapse ;
@@ -828,34 +856,52 @@ ssize_t rread( int fd , void *buf , size_t count_h )
 	
 	INFOLOGC( "--- rfs_api v%s --- rread[%d][0x%X][%d]" , __RFS_VERSION , fd , buf , count_h )
 	
-	if( fd < 0 )
+	memset( & remote_fd , 0x00 , sizeof(struct RemoteFd) );
+	remote_fd.fd = fd ;
+	p_remote_fd = QueryRemoteFdsTreeNodeByRfd( & g_remote_fds , & remote_fd ) ;
+	if( p_remote_fd == NULL )
+	{
+		ERRORLOGC( "QueryRemoteFdsTreeNodeByRfd failed , fd[%d]" , remote_fd.fd )
 		return -1;
-	if( unit_enable != 1 )
-		return -1;
+	}
 	
 	memset( & riovec , 0x00 , sizeof(struct riovec) );
 	for( i = 0 ; i < g_p_rfs_api_conf->_servers_count ; i++ )
 	{
-		riovec.send_iov[i][0].iov_base = "R" ; riovec.send_iov[i][0].iov_len = 1 ;
-		riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
-		fd_n[i]=htonl((uint32_t)remote_fd[i]);
-		riovec.send_iov[i][2].iov_base = & (fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
-		count_n[i]=htonl((uint32_t)count_h);
-		riovec.send_iov[i][3].iov_base = & (count_n[i]) ; riovec.send_iov[i][3].iov_len = 4 ;
-		riovec.p_send_iov_ptr[i] = riovec.send_iov[i] ;
-		riovec.send_iovcnt[i] = 4 ;
-		
-		riovec.recv_iov[i][0].iov_base = & (read_len_n[i]) ; riovec.recv_iov[i][0].iov_len = 4 ;
-		riovec.recv_iov[i][1].iov_base = buf ; riovec.recv_iov[i][1].iov_len = 0 ;
-		riovec.recv_iov[i][2].iov_base = & (errno_n[i]) ; riovec.recv_iov[i][2].iov_len = 4 ;
-		riovec.p_recv_iov_ptr[i] = riovec.recv_iov[i] ;
-		riovec.recv_iovcnt[i] = 1 ;
+		if( g_connect_pollfds[i].fd != -1 && g_is_connected[i] == 1 )
+		{
+			if( p_remote_fd->remote_fd[i] != -1 )
+			{
+				riovec.send_iov[i][0].iov_base = "R" ; riovec.send_iov[i][0].iov_len = 1 ;
+				riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
+				fd_n[i]=htonl((uint32_t)(p_remote_fd->remote_fd[i]));
+				riovec.send_iov[i][2].iov_base = & (fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
+				count_n[i]=htonl((uint32_t)count_h);
+				riovec.send_iov[i][3].iov_base = & (count_n[i]) ; riovec.send_iov[i][3].iov_len = 4 ;
+				riovec.p_send_iov_ptr[i] = riovec.send_iov[i] ;
+				riovec.send_iovcnt[i] = 4 ;
+				
+				riovec.recv_iov[i][0].iov_base = & (read_len_n[i]) ; riovec.recv_iov[i][0].iov_len = 4 ;
+				riovec.recv_iov[i][1].iov_base = buf ; riovec.recv_iov[i][1].iov_len = 0 ;
+				riovec.recv_iov[i][2].iov_base = & (errno_n[i]) ; riovec.recv_iov[i][2].iov_len = 4 ;
+				riovec.p_recv_iov_ptr[i] = riovec.recv_iov[i] ;
+				riovec.recv_iovcnt[i] = 1 ;
+			}
+			else
+			{
+				riovec.p_send_iov_ptr[i] = NULL ;
+				riovec.send_iovcnt[i] = 0 ;
+				
+				riovec.p_recv_iov_ptr[i] = NULL ;
+				riovec.recv_iovcnt[i] = 0 ;
+			}
+		}
 	}
 	riovec.pfuncAdjustSendVectors = NULL ;
 	riovec.pfuncAdjustReceiveVectors = & AdjustVectors_rread ;
 	
 	SECONDS_TO_TIMEVAL( 300 , elapse )
-	nret = rio( & riovec , & elapse ) ;
+	nret = rio( p_remote_fd , & riovec , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "rio failed[%d]" , nret )
@@ -869,11 +915,26 @@ ssize_t rread( int fd , void *buf , size_t count_h )
 	max_read_len = -1 ;
 	for( i = 0 ; i < g_p_rfs_api_conf->_servers_count ; i++ )
 	{
-		if( g_connect_pollfds[i].fd != -1 )
+		if( g_connect_pollfds[i].fd != -1 && g_is_connected[i] == 1 )
 		{
-			read_len_h[i] = ntohl(read_len_n[i]) ;
-			if( read_len_h[i] > max_read_len )
-				max_read_len = read_len_h[i] ;
+			if( p_remote_fd->remote_fd[i] != -1 )
+			{
+				read_len_h[i] = ntohl(read_len_n[i]) ;
+				errno_h = ntohl((uint32_t)(errno_n[i])) ;
+				if( errno == 0 && errno_h != 0 )
+					errno = errno_h ;
+				if( read_len_h[i] == -1 )
+				{
+					ERRORLOGC( "[%d] ret[%d] errno[%d]" , i , read_len_h[i] , errno_h )
+				}
+				else
+				{
+					INFOLOGC( "[%d] ret[%d] errno[%d]" , i , read_len_h[i] , errno_h )
+					
+					if( read_len_h[i] > max_read_len )
+						max_read_len = read_len_h[i] ;
+				}
+			}
 		}
 	}
 	
@@ -884,11 +945,13 @@ ssize_t rread( int fd , void *buf , size_t count_h )
 
 ssize_t rwrite( int fd , char *buf , size_t count_h )
 {
+	struct RemoteFd	remote_fd , *p_remote_fd = NULL ;
 	int		fd_n[RFSAPI_CONNECT_SOCK_MAX] ;
 	int		count_n[RFSAPI_CONNECT_SOCK_MAX] ;
 	int		wrote_len_n[RFSAPI_CONNECT_SOCK_MAX] ;
 	int		wrote_len_h[RFSAPI_CONNECT_SOCK_MAX] ;
 	ssize_t		max_wrote_len ;
+	uint32_t	errno_h[RFSAPI_CONNECT_SOCK_MAX] ;
 	uint32_t	errno_n[RFSAPI_CONNECT_SOCK_MAX] ;
 	struct riovec	riovec ;
 	int		i ;
@@ -898,17 +961,21 @@ ssize_t rwrite( int fd , char *buf , size_t count_h )
 	
 	INFOLOGC( "--- rfs_api v%s --- rwrite[%d][0x%X][%d]" , __RFS_VERSION , fd , buf , count_h )
 	
-	if( fd < 0 )
+	memset( & remote_fd , 0x00 , sizeof(struct RemoteFd) );
+	remote_fd.fd = fd ;
+	p_remote_fd = QueryRemoteFdsTreeNodeByRfd( & g_remote_fds , & remote_fd ) ;
+	if( p_remote_fd == NULL )
+	{
+		ERRORLOGC( "QueryRemoteFdsTreeNodeByRfd failed , fd[%d]" , remote_fd.fd )
 		return -1;
-	if( unit_enable != 1 )
-		return -1;
+	}
 	
 	memset( & riovec , 0x00 , sizeof(struct riovec) );
 	for( i = 0 ; i < g_p_rfs_api_conf->_servers_count ; i++ )
 	{
 		riovec.send_iov[i][0].iov_base = "W" ; riovec.send_iov[i][0].iov_len = 1 ;
 		riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
-		fd_n[i]=htonl((uint32_t)remote_fd[i]);
+		fd_n[i]=htonl((uint32_t)(p_remote_fd->remote_fd[i]));
 		riovec.send_iov[i][2].iov_base = & (fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
 		count_n[i]=htonl((uint32_t)count_h);
 		riovec.send_iov[i][3].iov_base = & (count_n[i]) ; riovec.send_iov[i][3].iov_len = 4 ;
@@ -925,7 +992,7 @@ ssize_t rwrite( int fd , char *buf , size_t count_h )
 	riovec.pfuncAdjustReceiveVectors = NULL ;
 	
 	SECONDS_TO_TIMEVAL( 300 , elapse )
-	nret = rio( & riovec , & elapse ) ;
+	nret = rio( p_remote_fd , & riovec , & elapse ) ;
 	if( nret )
 	{
 		ERRORLOGC( "rio failed[%d]" , nret )
@@ -939,11 +1006,26 @@ ssize_t rwrite( int fd , char *buf , size_t count_h )
 	max_wrote_len = -1 ;
 	for( i = 0 ; i < g_p_rfs_api_conf->_servers_count ; i++ )
 	{
-		if( g_connect_pollfds[i].fd != -1 )
+		if( g_connect_pollfds[i].fd != -1 && g_is_connected[i] == 1 )
 		{
-			wrote_len_h[i] = ntohl(wrote_len_n[i]) ;
-			if( wrote_len_h[i] > max_wrote_len )
-				max_wrote_len = wrote_len_h[i] ;
+			if( p_remote_fd->remote_fd[i] != -1 )
+			{
+				wrote_len_h[i] = ntohl(wrote_len_n[i]) ;
+				errno_h[i] = ntohl((uint32_t)(errno_n[i])) ;
+				if( errno == 0 && errno_h[i] != 0 )
+					errno = errno_h[i] ;
+				if( wrote_len_h[i] == -1 )
+				{
+					ERRORLOGC( "[%d] wrote_len[%d] errno[%d]" , i , wrote_len_h[i] , errno_h[i] )
+				}
+				else
+				{
+					INFOLOGC( "[%d] wrote_len[%d] errno[%d]" , i , wrote_len_h[i] , errno_h[i] )
+					
+					if( wrote_len_h[i] > max_wrote_len )
+						max_wrote_len = wrote_len_h[i] ;
+				}
+			}
 		}
 	}
 	
@@ -976,6 +1058,4 @@ int rfeof( FILE *fp )
 {
 	return 0;
 }
-
-#endif
 

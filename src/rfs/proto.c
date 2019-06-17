@@ -52,23 +52,23 @@ int ropen( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_
 	else
 	{
 		INFOLOGC( "call open[%s][%d] ok , fd[%d]" , pathfilename , flags , file_fd )
-	}
-	
-	p_local_fd = (struct LocalFd *)malloc( sizeof(struct LocalFd) ) ;
-	if( p_local_fd == NULL )
-	{
-		ERRORLOGC( "malloc failed , errno[%d]" , errno )
-		close( file_fd ); file_fd = -1 ;
-	}
-	else
-	{
-		memset( p_local_fd , 0x00 , sizeof(struct LocalFd) );
-		p_local_fd->local_fd = file_fd ;
-		nret = LinkLocalFdsTreeNodeByLocalFd( p_local_fds , p_local_fd ) ;
-		if( nret )
+		
+		p_local_fd = (struct LocalFd *)malloc( sizeof(struct LocalFd) ) ;
+		if( p_local_fd == NULL )
 		{
-			ERRORLOGC( "LinkLocalFdsTreeNodeByLocalFd failed[%d]" , nret )
+			ERRORLOGC( "malloc failed , errno[%d]" , errno )
 			close( file_fd ); file_fd = -1 ;
+		}
+		else
+		{
+			memset( p_local_fd , 0x00 , sizeof(struct LocalFd) );
+			p_local_fd->local_fd = file_fd ;
+			nret = LinkLocalFdsTreeNodeByLocalFd( p_local_fds , p_local_fd ) ;
+			if( nret )
+			{
+				ERRORLOGC( "LinkLocalFdsTreeNodeByLocalFd failed[%d]" , nret )
+				close( file_fd ); file_fd = -1 ;
+			}
 		}
 	}
 	
@@ -155,23 +155,23 @@ int ropen3( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p
 	else
 	{
 		DEBUGLOGC( "call open[%s][%d][%d] ok , fd[%d]" , pathfilename , flags , mode , file_fd )
-	}
-	
-	p_local_fd = (struct LocalFd *)malloc( sizeof(struct LocalFd) ) ;
-	if( p_local_fd == NULL )
-	{
-		ERRORLOGC( "malloc failed , errno[%d]" , errno )
-		close( file_fd ); file_fd = -1 ;
-	}
-	else
-	{
-		memset( p_local_fd , 0x00 , sizeof(struct LocalFd) );
-		p_local_fd->local_fd = file_fd ;
-		nret = LinkLocalFdsTreeNodeByLocalFd( p_local_fds , p_local_fd ) ;
-		if( nret )
+		
+		p_local_fd = (struct LocalFd *)malloc( sizeof(struct LocalFd) ) ;
+		if( p_local_fd == NULL )
 		{
-			ERRORLOGC( "LinkLocalFdsTreeNodeByLocalFd failed[%d]" , nret )
+			ERRORLOGC( "malloc failed , errno[%d]" , errno )
 			close( file_fd ); file_fd = -1 ;
+		}
+		else
+		{
+			memset( p_local_fd , 0x00 , sizeof(struct LocalFd) );
+			p_local_fd->local_fd = file_fd ;
+			nret = LinkLocalFdsTreeNodeByLocalFd( p_local_fds , p_local_fd ) ;
+			if( nret )
+			{
+				ERRORLOGC( "LinkLocalFdsTreeNodeByLocalFd failed[%d]" , nret )
+				close( file_fd ); file_fd = -1 ;
+			}
 		}
 	}
 	
