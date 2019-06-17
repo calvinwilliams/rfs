@@ -99,11 +99,19 @@ typedef struct
 {
 	struct
 	{
+		char	log_level[ 5 + 1 ] ;
+	} log ;
+	struct
+	{
 		char	ip[ 20 + 1 ] ;
 		int	port ;
 	} servers [ 8 ] ;
 	int	_servers_count ;
 	int	_servers_size ;
+	struct
+	{
+		int	connecting_timeout ;
+	} comm ;
 } rfs_api_conf ;
 
 _WINDLL_FUNC int DSCINIT_rfs_api_conf( rfs_api_conf *pst );

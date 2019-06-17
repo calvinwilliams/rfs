@@ -16,15 +16,12 @@ int RFSSendData( int sock , char *data , uint64_t data_len , uint64_t *p_sent_le
 	while( remain_len > 0 )
 	{
 		GET_BEGIN_TIMEVAL
-		
 		TIMEVAL_TO_MILLISECONDS( (*p_elapse) , timeout )
 		pollfd.fd = sock ;
 		pollfd.events = POLLOUT|POLLERR ;
 		nret = poll( & pollfd , 1 , timeout ) ;
-		
 		GET_END_TIMEVAL_AND_DIFF
 		REDUCE_TIMEVAL( (*p_elapse) , DIFF_TIMEVAL )
-		
 		if( nret == -1 )
 		{
 			if( p_sent_len )
@@ -81,15 +78,12 @@ int RFSReceiveData( int sock , char *data , uint64_t data_len , uint64_t *p_rece
 	while( remain_len > 0 )
 	{
 		GET_BEGIN_TIMEVAL
-		
 		TIMEVAL_TO_MILLISECONDS( (*p_elapse) , timeout )
 		pollfd.fd = sock ;
 		pollfd.events = POLLIN|POLLERR ;
 		nret = poll( & pollfd , 1 , timeout ) ;
-		
 		GET_END_TIMEVAL_AND_DIFF
 		REDUCE_TIMEVAL( (*p_elapse) , DIFF_TIMEVAL )
-		
 		if( nret == -1 )
 		{
 			if( p_received_len )
@@ -334,12 +328,9 @@ int RFSSendDataVectors( int sock , struct iovec *send_iov , struct iovec **pp_se
 	ssize_t		len ;
 	
 	GET_BEGIN_TIMEVAL
-	
 	len = writev( sock , (*pp_send_iov_ptr) , (*p_send_iovcnt) ) ;
-	
 	GET_END_TIMEVAL_AND_DIFF
 	REDUCE_TIMEVAL( (*p_elapse) , DIFF_TIMEVAL )
-	
 	if( len == -1 )
 	{
 		if( errno == EAGAIN )
@@ -374,7 +365,6 @@ int RFSSendDataVectors( int sock , struct iovec *send_iov , struct iovec **pp_se
 				DEBUGHEXLOGC( (*pp_send_iov_ptr)->iov_base , (*pp_send_iov_ptr)->iov_len , "writev sock[%d] [%d]bytes" , sock , (*pp_send_iov_ptr)->iov_len )
 				len -= (*pp_send_iov_ptr)->iov_len ;
 				(*pp_send_iov_ptr)->iov_len = 0 ;
-				// (*pp_send_iov_ptr)->iov_base = NULL ;
 				(*pp_send_iov_ptr)++;
 				(*p_send_iovcnt)--;
 				if( pfuncAdjustSendVectors )
@@ -395,12 +385,9 @@ int RFSReceiveDataVectors( int sock , struct iovec *recv_iov , struct iovec **pp
 	ssize_t		len ;
 	
 	GET_BEGIN_TIMEVAL
-	
 	len = readv( sock , (*pp_recv_iov_ptr) , (*p_recv_iovcnt) ) ;
-	
 	GET_END_TIMEVAL_AND_DIFF
 	REDUCE_TIMEVAL( (*p_elapse) , DIFF_TIMEVAL )
-	
 	if( len == -1 )
 	{
 		if( errno == EAGAIN )
@@ -435,7 +422,6 @@ int RFSReceiveDataVectors( int sock , struct iovec *recv_iov , struct iovec **pp
 				DEBUGHEXLOGC( (*pp_recv_iov_ptr)->iov_base , (*pp_recv_iov_ptr)->iov_len , "readv sock[%d] [%d]bytes" , sock , (*pp_recv_iov_ptr)->iov_len )
 				len -= (*pp_recv_iov_ptr)->iov_len ;
 				(*pp_recv_iov_ptr)->iov_len = 0 ;
-				// (*pp_recv_iov_ptr)->iov_base = NULL ;
 				(*pp_recv_iov_ptr)++;
 				(*p_recv_iovcnt)--;
 				if( pfuncAdjustReceiveVectors )
