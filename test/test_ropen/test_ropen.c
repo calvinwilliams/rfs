@@ -20,9 +20,6 @@ int main()
 	else
 	{
 		printf( "ropen[%s] ok , fd[%d]\n" , TEST_ROPEN_TXT , fd );
-		
-		rclose( fd );
-		printf( "rclose fd[%d]\n" , fd );
 	}
 	
 	fd = ropen( TEST_ROPEN_TXT , O_CREAT|O_EXCL|O_WRONLY ) ;
@@ -33,10 +30,6 @@ int main()
 	else
 	{
 		printf( "ropen[%s] ok , fd[%d]\n" , TEST_ROPEN_TXT , fd );
-		
-		rclose( fd );
-		printf( "rclose fd[%d]\n" , fd );
-		
 		return 1;
 	}
 	
@@ -49,9 +42,6 @@ int main()
 	else
 	{
 		printf( "ropen3[%s] ok , fd[%d]\n" , TEST_ROPEN3_TXT , fd );
-		
-		rclose( fd );
-		printf( "rclose fd[%d]\n" , fd );
 	}
 	
 	fd = ropen3( TEST_ROPEN3_TXT , O_CREAT|O_EXCL|O_WRONLY , 0700 ) ;
@@ -62,10 +52,6 @@ int main()
 	else
 	{
 		printf( "ropen3[%s] ok , fd[%d]\n" , TEST_ROPEN3_TXT , fd );
-		
-		rclose( fd );
-		printf( "rclose fd[%d]\n" , fd );
-		
 		return 1;
 	}
 	

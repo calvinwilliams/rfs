@@ -2,16 +2,16 @@
 
 int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock )
 {
-	struct RemoteFileSession	session ;
+	struct LocalFds		local_fds ;
+	struct LocalFd		*p_local_fd = NULL ;
 	
-	struct timeval			elapse ;
-	char				command ;
-	char				version ;
+	struct timeval		elapse ;
+	char			command ;
+	char			version ;
 	
-	int				nret = 0 ;
+	int			nret = 0 ;
 	
-	memset( & session , 0x00 , sizeof(struct RemoteFileSession) );
-	session.file_fd = -1 ;
+	memset( & local_fds , 0x00 , sizeof(struct LocalFds) );
 	
 	while(1)
 	{
@@ -48,39 +48,31 @@ int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock )
 		
 		if( command == 'O' && version == '1' )
 		{
-			nret = ropen( accepted_sock , & elapse , & session ) ;
+			nret = ropen( accepted_sock , & local_fds , & elapse ) ;
 			if( nret )
-				break;
-			
-			if( session.file_fd == -1 )
 				break;
 		}
 		else if( command == 'O' && version == '3' )
 		{
-			nret = ropen3( accepted_sock , & elapse , & session ) ;
+			nret = ropen3( accepted_sock , & local_fds , & elapse ) ;
 			if( nret )
-				break;
-			
-			if( session.file_fd == -1 )
 				break;
 		}
 		else if( command == 'C' && version == '1' )
 		{
-			nret = rclose( accepted_sock , & elapse , & session ) ;
+			nret = rclose( accepted_sock , & local_fds , & elapse ) ;
 			if( nret )
 				break;
-			
-			break;
 		}
 		else if( command == 'R' && version == '1' )
 		{
-			nret = rread( accepted_sock , & elapse , & session ) ;
+			nret = rread( accepted_sock , & local_fds , & elapse ) ;
 			if( nret )
 				break;
 		}
 		else if( command == 'W' && version == '1' )
 		{
-			nret = rwrite( accepted_sock , & elapse , & session ) ;
+			nret = rwrite( accepted_sock , & local_fds , & elapse ) ;
 			if( nret )
 				break;
 		}
@@ -91,11 +83,18 @@ int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock )
 		}
 	}
 	
-	if( session.file_fd >= 0 )
+	p_local_fd = NULL ;
+	while(1)
 	{
-		INFOLOGC( "close file fd[%d]" , session.file_fd )
-		close( session.file_fd );
+		p_local_fd = TravelLocalFdsTreeByLocalFd( & local_fds , p_local_fd ) ;
+		if( p_local_fd == NULL )
+			break;
+		
+		WARNLOGC( "close[%d]" , p_local_fd->local_fd )
+		close( p_local_fd->local_fd );
 	}
+	DestroyLocalFdsTree( & local_fds );
 	
 	return 0;
 }
+

@@ -27,14 +27,14 @@ int main( int argc , char *argv[] )
 		}
 		else
 		{
-			printf( "*** ERROR : Command parameter[%s] invalid\n" , argv[c] );
+			printf( "*** ERROR : command parameter[%s] invalid\n" , argv[c] );
 			exit(7);
 		}
 	}
 	
 	if( g_rfs_conf_filename[0] == '\0' )
 	{
-		printf( "*** ERROR : Use '-f' set rfs.conf\n" );
+		printf( "*** ERROR : use '-f' set rfs.conf\n" );
 		exit(7);
 	}
 	else
@@ -56,10 +56,10 @@ int main( int argc , char *argv[] )
 			(*p) = '\0' ;
 	}
 	
-	file_content = RFSDupFileContent( g_rfs_conf_filename ) ;
-	if( file_content == NULL )
+	nret = RFSDupFileContent( NULL , & file_content , g_rfs_conf_filename ) ;
+	if( nret )
 	{
-		printf( "*** ERROR : Can't open config file[%s] , errno[%d]\n" , g_rfs_conf_filename , errno );
+		printf( "*** ERROR : can't open config file[%s] [%d] , errno[%d]\n" , g_rfs_conf_filename , nret , errno );
 		exit(1);
 	}
 	
@@ -67,7 +67,7 @@ int main( int argc , char *argv[] )
 	nret = DSCDESERIALIZE_JSON_rfs_conf( NULL , file_content , NULL , & rfs_conf ) ;
 	if( nret )
 	{
-		printf( "*** ERROR : Parse config[%s] failed[%d] , errno[%d]\n" , file_content , nret , errno );
+		printf( "*** ERROR : parse config[%s] failed[%d] , errno[%d]\n" , file_content , nret , errno );
 		free( file_content );
 		return 4;
 	}

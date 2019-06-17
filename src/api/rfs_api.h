@@ -15,7 +15,9 @@
 extern "C" {
 #endif
 
-int rset( char *node_id );
+int rsetconf( char *format , ... );
+void rdisconnect();
+int rconnect();
 
 int ropen( char *pathfilename , int flags );
 int ropen3( char *pathfilename , int flags , mode_t mode );

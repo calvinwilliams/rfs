@@ -27,6 +27,22 @@ int DSCSERIALIZE_JSON_rfs_api_conf( rfs_api_conf *pst , char *encoding , char *b
 	remain_len = (*p_len) ;
 	memset( tabs , '\t' , 10 );
 	len=SNPRINTF(buf,remain_len,"{\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	\"log\" : \n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	{\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"		"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\"log_level\" : "); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	if(pst->log.log_level[0]==DSCNULL)
+	{
+	len=SNPRINTF(buf,remain_len,"null"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	}
+	else
+	{
+	len=SNPRINTF(buf,remain_len,"\""); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	JSONESCAPE_EXPAND(pst->log.log_level,strlen(pst->log.log_level),buf,len,remain_len); if(len<0)return -7; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\""); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	}
+	len=SNPRINTF(buf,remain_len,"\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	} ,\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"	\"servers\" : \n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"	[\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 			for( index[1] = 0 ; index[1]<pst->_servers_count ; index[1]++ )
@@ -54,7 +70,14 @@ int DSCSERIALIZE_JSON_rfs_api_conf( rfs_api_conf *pst , char *encoding , char *b
 			else
 			{ len=SNPRINTF(buf,remain_len,"	}\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len; }
 			}
-	len=SNPRINTF(buf,remain_len,"	]\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	] ,\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	\"comm\" : \n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	{\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"		"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\"connecting_timeout\" : "); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"%d",pst->comm.connecting_timeout); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	len=SNPRINTF(buf,remain_len,"	}\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	len=SNPRINTF(buf,remain_len,"}\n"); if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
 	
 	(*p_len) = (*p_len) - remain_len ;
@@ -105,6 +128,22 @@ int DSCSERIALIZE_JSON_DUP_rfs_api_conf( rfs_api_conf *pst , char *encoding , cha
 	buf = (*pp_base) + buf_begin_offset ;
 	memset( tabs , '\t' , 10 );
 	while(1){len=SNPRINTF(buf,remain_len,"{\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	\"log\" : \n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	{\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"		");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\"log_level\" : ");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	if(pst->log.log_level[0]==DSCNULL)
+	{
+	while(1){len=SNPRINTF(buf,remain_len,"null");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} if(len<0||remain_len<len)return -1; buf+=len; remain_len-=len;
+	}
+	else
+	{
+	while(1){len=SNPRINTF(buf,remain_len,"\"");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){JSONESCAPE_EXPAND(pst->log.log_level,strlen(pst->log.log_level),buf,len,remain_len);if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\"");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	}
+	while(1){len=SNPRINTF(buf,remain_len,"\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	} ,\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"	\"servers\" : \n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"	[\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 			for( index[1] = 0 ; index[1]<pst->_servers_count ; index[1]++ )
@@ -132,7 +171,14 @@ int DSCSERIALIZE_JSON_DUP_rfs_api_conf( rfs_api_conf *pst , char *encoding , cha
 			else
 			{ while(1){len=SNPRINTF(buf,remain_len,"	}\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len; }
 			}
-	while(1){len=SNPRINTF(buf,remain_len,"	]\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	] ,\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	\"comm\" : \n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	{\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"		");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\"connecting_timeout\" : ");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"%d",pst->comm.connecting_timeout);if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
+	while(1){len=SNPRINTF(buf,remain_len,"	}\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	while(1){len=SNPRINTF(buf,remain_len,"}\n");if(len<0||remain_len<=len){char *tmp=NULL;int buf_offset=buf-(*pp_base);int new_buf_size;if(buf_size<1024*1024*1024)new_buf_size=buf_size*2;else new_buf_size=buf_size+10*1024*1024;tmp=(char*)realloc(*pp_base,new_buf_size);if(tmp==NULL)return -2;else (*pp_base)=tmp,buf=(*pp_base)+buf_offset,remain_len+=new_buf_size-buf_size,buf_size=new_buf_size,memset(buf,0x00,remain_len+1);}else {break;}} buf+=len; remain_len-=len;
 	
 	if( p_buf_size )
@@ -173,12 +219,18 @@ int CallbackOnJsonNode_rfs_api_conf( int type , char *jpath , int jpath_len , in
 	}
 	else if( type & FASTERJSON_NODE_LEAF )
 	{
+			/* log_level */
+			if( jpath_len == 14 && strncmp( jpath , "/log/log_level" , jpath_len ) == 0 )
+			{JSONUNESCAPE_FOLD(content,content_len,pst->log.log_level,len,sizeof(pst->log.log_level)-1); if(len<0){_DSC_errline=__LINE__;return -7;}}
 			/* ip */
 			if( jpath_len == 11 && strncmp( jpath , "/servers/ip" , jpath_len ) == 0 )
 			{JSONUNESCAPE_FOLD(content,content_len,pst->servers[pst->_servers_count].ip,len,sizeof(pst->servers[pst->_servers_count].ip)-1); if(len<0){_DSC_errline=__LINE__;return -7;}}
 			/* port */
 			if( jpath_len == 13 && strncmp( jpath , "/servers/port" , jpath_len ) == 0 )
 			{NATOI(content,content_len,pst->servers[pst->_servers_count].port);}
+			/* connecting_timeout */
+			if( jpath_len == 24 && strncmp( jpath , "/comm/connecting_timeout" , jpath_len ) == 0 )
+			{NATOI(content,content_len,pst->comm.connecting_timeout);}
 	}
 	
 	return 0;

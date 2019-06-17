@@ -20,6 +20,9 @@
 #include <netinet/tcp.h>
 #include <sys/uio.h>
 
+#include "rbtree.h"
+#include "rbtree_tpl.h"
+
 #include "LOGC.h"
 
 #ifdef __cplusplus
@@ -123,7 +126,7 @@ int RFSConvertLogLevelString( char *log_level_str );
 
 /* file */
 
-char *RFSDupFileContent( char *format , ... );
+int RFSDupFileContent( int *p_fd , char **pp_file_content , char *format , ... );
 
 /* tcp */
 

@@ -8,6 +8,7 @@
 ###### 源文件配置区
 #@ c_FILE
 c_FILE		=	\
+			rbtree.c \
 			LOGC.c \
 			fasterjson.c \
 			comm.c \
@@ -21,6 +22,8 @@ include makeinstall
 LIB		=	librfs_util.so
 LIBINST		=	$(_LIBINST)
 HDER		= \
+			rbtree.h \
+			rbtree_tpl.h \
 			LOGC.h \
 			fasterjson.h \
 			rfs_util.h \

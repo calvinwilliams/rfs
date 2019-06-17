@@ -9,20 +9,25 @@
 extern "C" {
 #endif
 
+struct LocalFd
+{
+	int		local_fd ;
+	struct rb_node	local_fd_rbnode_by_order_by_local_fd ;
+} ;
+
+struct LocalFds
+{
+	struct rb_root	local_fds_rbtree_order_by_local_fd ;
+} ;
+
+int LinkLocalFdsTreeNodeByLocalFd( struct LocalFds *p_local_fds , struct LocalFd *p_local_fd );
+struct LocalFd *QueryLocalFdsTreeNodeByLocalFd( struct LocalFds *p_local_fds , struct LocalFd *p_local_fd );
+void UnlinkLocalFdsTreeNodeByLocalFd( struct LocalFds *p_local_fds , struct LocalFd *p_local_fd );
+struct LocalFd *TravelLocalFdsTreeByLocalFd( struct LocalFds *p_local_fds , struct LocalFd *p_local_fd );
+void DestroyLocalFdsTree( struct LocalFds *p_local_fds );
+
 extern char	g_rfs_conf_filename[ PATH_MAX ] ;
 extern char	g_rfs_conf_main_filename[ PATH_MAX ] ;
-
-struct RemoteFileSession
-{
-	int			accepted_sock ;
-	
-	char			pathfilename[ (1<<16) + 1 ] ;
-	int			pathfilename_len ;
-	int			flags ;
-	int			mode ;
-	
-	int			file_fd ;
-} ;
 
 int monitor( rfs_conf *p_rfs_conf );
 int worker( rfs_conf *p_rfs_conf , int process_index , int listen_sock , int accepting_mutex );
@@ -55,11 +60,11 @@ RESPONSE : |buf:L4VSTR|errno:INT4|
 RESPONSE : |wrote_len:INT4|errno:INT4|
 */
 
-int ropen( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSession *p_session );
-int ropen3( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSession *p_session );
-int rclose( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSession *p_session );
-int rread( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSession *p_session );
-int rwrite( int accepted_sock , struct timeval *p_elapse , struct RemoteFileSession *p_session );
+int ropen( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
+int ropen3( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
+int rclose( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
+int rread( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
+int rwrite( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
 
 #ifdef __cplusplus
 }
