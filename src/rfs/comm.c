@@ -76,6 +76,12 @@ int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock )
 			if( nret )
 				break;
 		}
+		else if( command == 'E' && version == '1' )
+		{
+			nret = reof( accepted_sock , & local_fds , & elapse ) ;
+			if( nret )
+				break;
+		}
 		else
 		{
 			ERRORLOGC( "unknow COMMAND[%c] and VERSION[%c]" , command , version )

@@ -10,6 +10,7 @@ DIROBJS		= \
 			test_ropen \
 			test_rwrite \
 			test_rread \
+			test_rfwrite \
 
 ###### ¼ÓÔØmktplÄ£°å¿â
 #@ FILESYSTEM

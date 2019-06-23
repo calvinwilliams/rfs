@@ -1,7 +1,5 @@
 #include "rfs_api.h"
 
-#define NODE_ID		"UFT"
-
 #define TEST_RWRITE_TXT	"test_rwrite.txt"
 
 /*
@@ -13,7 +11,7 @@ int main()
 	int		fd ;
 	time_t		now ;
 	struct tm	now_time ;
-	char		now_time_str[ 19 + 1 ] ;
+	char		now_time_str[ 20 + 1 ] ;
 	ssize_t		wrote_len ;
 	
 	int		nret = 0 ;
@@ -32,6 +30,7 @@ int main()
 	now = time(NULL) ;
 	localtime_r( & now , & now_time );
 	strftime( now_time_str , sizeof(now_time_str) , "%Y-%m-%d %H:%M:%S" , & now_time );
+	strcat( now_time_str , "\n" );
 	wrote_len = rwrite( fd , now_time_str , strlen(now_time_str) ) ;
 	if( wrote_len == -1 )
 	{
@@ -40,18 +39,7 @@ int main()
 	}
 	else
 	{
-		printf( "rwrite[%s][%s] ok\n" , NODE_ID , now_time_str );
-	}
-	
-	wrote_len = rwrite( fd , "\n" , 1 ) ;
-	if( wrote_len == -1 )
-	{
-		printf( "*** ERROR : rwrite[%s][\\n] failed[%d]\n" , TEST_RWRITE_TXT , nret );
-		return 1;
-	}
-	else
-	{
-		printf( "rwrite[%s][\\n] ok\n" , NODE_ID );
+		printf( "rwrite[%s][%s] ok\n" , TEST_RWRITE_TXT , now_time_str );
 	}
 	
 	rclose( fd );

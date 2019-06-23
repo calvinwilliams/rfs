@@ -476,3 +476,101 @@ int rwrite( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p
 	return 0;
 }
 
+int reof( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
+{
+	int		file_fd ;
+	
+	struct LocalFd	local_fd ;
+	struct LocalFd	*p_local_fd = NULL ;
+	struct stat	stat ;
+	off_t		offset ;
+	
+	int		ret ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveInt4( accepted_sock , & file_fd , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 flags failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt4 flags[%d] ok" , file_fd )
+	}
+	
+	memset( & local_fd , 0x00 , sizeof(struct LocalFd) );
+	local_fd.local_fd = file_fd ;
+	p_local_fd = QueryLocalFdsTreeNodeByLocalFd( p_local_fds , & local_fd ) ;
+	if( p_local_fd == NULL )
+	{
+		ERRORLOGC( "file_fd[%d] is not opened" , file_fd )
+		ret = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		INFOLOGC( "call eof[%d] ..." , file_fd )
+		
+		memset( & stat , 0x00 , sizeof(struct stat) );
+		ret = fstat( file_fd , & stat ) ;
+		if( ret == -1 )
+		{
+			ERRORLOGC( "call fstat[%d] failed[%d] , errno[%d]" , file_fd , ret , errno )
+		}
+		else
+		{
+			INFOLOGC( "call fstat[%d] ok" , file_fd )
+			
+			offset = (int)lseek( file_fd , 0 , SEEK_CUR ) ;
+			if( offset == -1 )
+			{
+				ERRORLOGC( "call lseek[%d] failed[%d] , errno[%d]" , file_fd , offset , errno )
+				ret = offset ;
+			}
+			else
+			{
+				INFOLOGC( "call lseek[%d] ok" , file_fd )
+				
+				if( ret == stat.st_size )
+					ret = 1 ;
+				else
+					ret = 0 ;
+			}
+		}
+	}
+	
+	nret = RFSSendInt4( accepted_sock , ret , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 ret[%d] failed[%d]" , ret , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 ret[%d] ok" , ret )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	if( p_local_fd )
+	{
+		UnlinkLocalFdsTreeNodeByLocalFd( p_local_fds , p_local_fd );
+		free( p_local_fd );
+	}
+	
+	return 0;
+}
+

@@ -21,17 +21,17 @@ int rconnect();
 
 int ropen( char *pathfilename , int flags );
 int ropen3( char *pathfilename , int flags , mode_t mode );
-int rclose( int fd );
+int rclose( int rfd );
 
-ssize_t rread( int fd , void *buf , size_t count );
-ssize_t rwrite( int fd , char *buf , size_t count );
+ssize_t rread( int rfd , void *buf , size_t count );
+ssize_t rwrite( int rfd , char *buf , size_t count );
 
 FILE *rfopen( char *pathfilename , char *mode );
-int rfclose( FILE *fp );
+int rfclose( FILE *rfp );
 
-size_t rfread( void *ptr , size_t size , size_t nmemb , FILE *fp );
-size_t rfwrite( void *ptr , size_t size , size_t nmemb , FILE *fp );
-int rfeof( FILE *fp );
+size_t rfread( void *ptr , size_t size , size_t nmemb , FILE *rfp );
+size_t rfwrite( void *ptr , size_t size , size_t nmemb , FILE *rfp );
+int rfeof( FILE *rfp );
 
 #ifdef __cplusplus
 }

@@ -58,13 +58,21 @@ RESPONSE : |buf:L4VSTR|errno:INT4|
  VERSION : 1
  REQUEST : |'W':CHAR|'1':CHAR|fd:INT4|buf:L4VSTR|
 RESPONSE : |wrote_len:INT4|errno:INT4|
+
+ COMMAND : reof
+ VERSION : 1
+ REQUEST : |'C':CHAR|'1':CHAR|fd:INT4|
+RESPONSE : |ret:INT4|errno:INT4|
 */
 
 int ropen( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
 int ropen3( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
 int rclose( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
+
 int rread( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
 int rwrite( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
+
+int reof( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse );
 
 #ifdef __cplusplus
 }

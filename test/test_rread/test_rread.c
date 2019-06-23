@@ -1,7 +1,5 @@
 #include "rfs_api.h"
 
-#define NODE_ID		"UFT"
-
 #define TEST_RWRITE_TXT	"test_rwrite.txt"
 
 /*
