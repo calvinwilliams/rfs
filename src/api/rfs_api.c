@@ -477,7 +477,7 @@ int ropen( char *pathfilename , int flags_h )
 	{
 		if( g_connect_pollfds[i].fd != -1 && g_is_connected[i] == 1 )
 		{
-			riovec.send_iov[i][0].iov_base = "O" ; riovec.send_iov[i][0].iov_len = 1 ;
+			riovec.send_iov[i][0].iov_base = "open\0\1\1\1" ; riovec.send_iov[i][0].iov_len = 8 ;
 			riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
 			riovec.send_iov[i][2].iov_base = & pathfilename_len_n ; riovec.send_iov[i][2].iov_len = 2 ;
 			riovec.send_iov[i][3].iov_base = pathfilename ; riovec.send_iov[i][3].iov_len = pathfilename_len_h ;
@@ -612,7 +612,7 @@ int ropen3( char *pathfilename , int flags_h , mode_t mode_h )
 	{
 		if( g_connect_pollfds[i].fd != -1 && g_is_connected[i] == 1 )
 		{
-			riovec.send_iov[i][0].iov_base = "O" ; riovec.send_iov[i][0].iov_len = 1 ;
+			riovec.send_iov[i][0].iov_base = "open3\0\1\1" ; riovec.send_iov[i][0].iov_len = 8 ;
 			riovec.send_iov[i][1].iov_base = "3" ; riovec.send_iov[i][1].iov_len = 1 ;
 			riovec.send_iov[i][2].iov_base = & pathfilename_len_n ; riovec.send_iov[i][2].iov_len = 2 ;
 			riovec.send_iov[i][3].iov_base = pathfilename ; riovec.send_iov[i][3].iov_len = pathfilename_len_h ;
@@ -748,7 +748,7 @@ static int _rclose( int rfd )
 		{
 			if( p_remote_fd->remote_fd[i] != -1 )
 			{
-				riovec.send_iov[i][0].iov_base = "C" ; riovec.send_iov[i][0].iov_len = 1 ;
+				riovec.send_iov[i][0].iov_base = "close\0\1\1" ; riovec.send_iov[i][0].iov_len = 8 ;
 				riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
 				remote_fd_n[i]=htonl((uint32_t)(p_remote_fd->remote_fd[i]));
 				riovec.send_iov[i][2].iov_base = & (remote_fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
@@ -888,7 +888,7 @@ ssize_t rread( int rfd , void *buf , size_t count_h )
 		{
 			if( p_remote_fd->remote_fd[i] != -1 )
 			{
-				riovec.send_iov[i][0].iov_base = "R" ; riovec.send_iov[i][0].iov_len = 1 ;
+				riovec.send_iov[i][0].iov_base = "read\0\1\1\1" ; riovec.send_iov[i][0].iov_len = 8 ;
 				riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
 				fd_n[i]=htonl((uint32_t)(p_remote_fd->remote_fd[i]));
 				riovec.send_iov[i][2].iov_base = & (fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
@@ -1000,7 +1000,7 @@ ssize_t rwrite( int rfd , char *buf , size_t count_h )
 	memset( & riovec , 0x00 , sizeof(struct riovec) );
 	for( i = 0 ; i < g_p_rfs_api_conf->_servers_count ; i++ )
 	{
-		riovec.send_iov[i][0].iov_base = "W" ; riovec.send_iov[i][0].iov_len = 1 ;
+		riovec.send_iov[i][0].iov_base = "write\0\1\1\1" ; riovec.send_iov[i][0].iov_len = 8 ;
 		riovec.send_iov[i][1].iov_base = "1" ; riovec.send_iov[i][1].iov_len = 1 ;
 		fd_n[i]=htonl((uint32_t)(p_remote_fd->remote_fd[i]));
 		riovec.send_iov[i][2].iov_base = & (fd_n[i]) ; riovec.send_iov[i][2].iov_len = 4 ;
@@ -1220,6 +1220,7 @@ size_t rfwrite( void *ptr , size_t size , size_t nmemb , FILE *rfp )
 	return len;
 }
 
+#if 0
 int rfeof( FILE *rfp )
 {
 	int		rfd ;
@@ -1339,4 +1340,4 @@ int rfeof( FILE *rfp )
 		return eof;
 	}
 }
-
+#endif

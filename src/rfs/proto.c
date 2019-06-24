@@ -6,11 +6,17 @@ UNLINK_RBTREENODE( UnlinkLocalFdsTreeNodeByLocalFd , struct LocalFds , local_fds
 TRAVEL_RBTREENODE( TravelLocalFdsTreeByLocalFd , struct LocalFds , local_fds_rbtree_order_by_local_fd , struct LocalFd , local_fd_rbnode_by_order_by_local_fd )
 DESTROY_RBTREE( DestroyLocalFdsTree , struct LocalFds , local_fds_rbtree_order_by_local_fd , struct LocalFd , local_fd_rbnode_by_order_by_local_fd , FREE_RBTREENODEENTRY_DIRECTLY )
 
-int ropen( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
+LINK_RBTREENODE_POINTER( LinkLocalFpsTreeNodeByLocalFp , struct LocalFps , local_fps_rbtree_order_by_local_fp , struct LocalFp , local_fp_rbnode_by_order_by_local_fp , local_fp )
+QUERY_RBTREENODE_POINTER( QueryLocalFpsTreeNodeByLocalFp , struct LocalFps , local_fps_rbtree_order_by_local_fp , struct LocalFp , local_fp_rbnode_by_order_by_local_fp , local_fp )
+UNLINK_RBTREENODE( UnlinkLocalFpsTreeNodeByLocalFp , struct LocalFps , local_fps_rbtree_order_by_local_fp , struct LocalFp , local_fp_rbnode_by_order_by_local_fp )
+TRAVEL_RBTREENODE( TravelLocalFpsTreeByLocalFp , struct LocalFps , local_fps_rbtree_order_by_local_fp , struct LocalFp , local_fp_rbnode_by_order_by_local_fp )
+DESTROY_RBTREE( DestroyLocalFpsTree , struct LocalFps , local_fps_rbtree_order_by_local_fp , struct LocalFp , local_fp_rbnode_by_order_by_local_fp , FREE_RBTREENODEENTRY_DIRECTLY )
+
+int rfs_open( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
 {
 	char		pathfilename[ (1<<16) + 1 ] ;
-	int		pathfilename_len ;
-	int		flags ;
+	uint16_t	pathfilename_len ;
+	uint32_t	flags ;
 	
 	int		file_fd ;
 	
@@ -97,12 +103,12 @@ int ropen( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_
 	return 0;
 }
 
-int ropen3( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
+int rfs_open3( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
 {
 	char		pathfilename[ (1<<16) + 1 ] ;
-	int		pathfilename_len ;
-	int		flags ;
-	int		mode ;
+	uint16_t	pathfilename_len ;
+	uint32_t	flags ;
+	uint32_t	mode ;
 	
 	int		file_fd ;
 	
@@ -200,9 +206,9 @@ int ropen3( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p
 	return 0;
 }
 
-int rclose( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
+int rfs_close( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
 {
-	int		file_fd ;
+	uint32_t	file_fd ;
 	
 	struct LocalFd	local_fd ;
 	struct LocalFd	*p_local_fd = NULL ;
@@ -281,15 +287,15 @@ int rclose( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p
 static __thread char		*sg_buf = NULL ;
 static __thread uint32_t	sg_buf_size = 0 ;
 
-int rread( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
+int rfs_read( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
 {
-	int		file_fd ;
+	uint32_t	file_fd ;
 	
 	struct LocalFd	local_fd ;
 	struct LocalFd	*p_local_fd = NULL ;
 	
-	int		read_len ;
-	int		data_len ;
+	uint32_t	read_len ;
+	uint32_t	data_len ;
 	
 	int		nret = 0 ;
 	
@@ -390,15 +396,15 @@ int rread( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_
 	return 0;
 }
 
-int rwrite( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
+int rfs_write( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
 {
-	int		file_fd ;
+	uint32_t	file_fd ;
 	
 	struct LocalFd	local_fd ;
 	struct LocalFd	*p_local_fd = NULL ;
 	
-	int		write_len ;
-	int		wrote_len ;
+	uint32_t	write_len ;
+	uint32_t	wrote_len ;
 	char		*p_buf = NULL ;
 	
 	int		nret = 0 ;
@@ -476,6 +482,7 @@ int rwrite( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p
 	return 0;
 }
 
+#if 0
 int reof( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
 {
 	int		file_fd ;
@@ -569,6 +576,177 @@ int reof( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_e
 	{
 		UnlinkLocalFdsTreeNodeByLocalFd( p_local_fds , p_local_fd );
 		free( p_local_fd );
+	}
+	
+	return 0;
+}
+#endif
+
+int rfs_fopen( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	char		pathfilename[ (1<<16) + 1 ] ;
+	uint16_t	pathfilename_len ;
+	char		mode[ (1<<8) + 1 ] ;
+	
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	memset( pathfilename , 0x00 , sizeof(pathfilename) );
+	nret = RFSReceiveL2VString( accepted_sock , pathfilename , & pathfilename_len , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveL2VString pathfilename failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveL2VString pathfilename[%s] ok" , pathfilename )
+	}
+	
+	memset( mode , 0x00 , sizeof(mode) );
+	nret = RFSReceiveL1VString( accepted_sock , mode , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveL1VString mode failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveL1VString mode[%s] ok" , mode )
+	}
+	
+	INFOLOGC( "call open[%s][%s] ..." , pathfilename , mode )
+	file_fp = fopen( pathfilename , mode ) ;
+	if( file_fp == NULL )
+	{
+		ERRORLOGC( "call fopen[%s][%s] failed , errno[%d]" , pathfilename , mode , errno )
+	}
+	else
+	{
+		INFOLOGC( "call fopen[%s][%s] ok , fp[%p]" , pathfilename , mode , file_fp )
+		
+		p_local_fp = (struct LocalFp *)malloc( sizeof(struct LocalFp) ) ;
+		if( p_local_fp == NULL )
+		{
+			ERRORLOGC( "malloc failed , errno[%d]" , errno )
+			fclose( file_fp ); file_fp = NULL ;
+		}
+		else
+		{
+			memset( p_local_fp , 0x00 , sizeof(struct LocalFp) );
+			p_local_fp->local_fp = file_fp ;
+			nret = LinkLocalFpsTreeNodeByLocalFp( p_local_fps , p_local_fp ) ;
+			if( nret )
+			{
+				ERRORLOGC( "LinkLocalFdsTreeNodeByLocalFd failed[%d]" , nret )
+				fclose( file_fp ); file_fp = NULL ;
+			}
+		}
+	}
+	
+	nret = RFSSendInt8( accepted_sock , (uint64_t) file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt8 fp[%p] failed[%d]" , file_fp , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt8 fp[%p] ok" , file_fp )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno[%d] failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno[%d] ok" , errno )
+	}
+	
+	return 0;
+}
+
+int rfs_fclose( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	int		ret ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%p] is not opened" , file_fp )
+		ret = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		INFOLOGC( "call fclose[%p] ..." , file_fp )
+		ret = fclose( file_fp ) ;
+		if( ret == -1 )
+		{
+			ERRORLOGC( "call fclose[%p] failed[%d] , errno[%d]" , file_fp , ret , errno )
+		}
+		else
+		{
+			INFOLOGC( "call fclose[%d] ok" , file_fp )
+		}
+	}
+	
+	nret = RFSSendInt4( accepted_sock , ret , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 ret[%d] failed[%d]" , ret , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 ret[%d] ok" , ret )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	if( p_local_fp )
+	{
+		UnlinkLocalFpsTreeNodeByLocalFp( p_local_fps , p_local_fp );
+		free( p_local_fp );
 	}
 	
 	return 0;

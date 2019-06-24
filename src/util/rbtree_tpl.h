@@ -135,6 +135,10 @@
 		return 0; \
 	} \
 
+#define LINK_RBTREENODE_POINTER		LINK_RBTREENODE_INT
+
+#define QUERY_RBTREENODE_POINTER	QUERY_RBTREENODE_INT
+
 typedef int funcCompareRbTreeNodeEntry( void *pv1 , void *pv2 );
 
 #define LINK_RBTREENODE( _this_func_ , _struct_ENV_ , _p_env_member_rbtree_ , _struct_UNIT_ , _p_unit_member_rbnode_ , _cmp_func_ ) \

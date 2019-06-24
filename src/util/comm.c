@@ -130,15 +130,15 @@ int RFSReceiveData( int sock , char *data , uint64_t data_len , uint64_t *p_rece
 	return 0;
 }
 
-int RFSSendInt4( int sock , int h4 , struct timeval *p_elapse )
+int RFSSendInt4( int sock , uint32_t h4 , struct timeval *p_elapse )
 {
 	uint32_t	n4 ;
 	
-	n4 = htonl((uint32_t)h4) ;
+	n4 = htonl(h4) ;
 	return RFSSendData( sock , (char*) & n4 , sizeof(uint32_t) , NULL , p_elapse );
 }
 
-int RFSReceiveInt4( int sock , int *p_h4 , struct timeval *p_elapse )
+int RFSReceiveInt4( int sock , uint32_t *p_h4 , struct timeval *p_elapse )
 {
 	uint32_t	n4 ;
 	
@@ -148,7 +148,30 @@ int RFSReceiveInt4( int sock , int *p_h4 , struct timeval *p_elapse )
 	if( nret )
 		return nret;
 	
-	(*p_h4) = (int)ntohl( n4 ) ;
+	(*p_h4) = ntohl( n4 ) ;
+	
+	return 0;
+}
+
+int RFSSendInt8( int sock , uint64_t h4 , struct timeval *p_elapse )
+{
+	uint64_t	n4 ;
+	
+	n4 = htobe64(h4) ;
+	return RFSSendData( sock , (char*) & n4 , sizeof(uint64_t) , NULL , p_elapse );
+}
+
+int RFSReceiveInt8( int sock , uint64_t *p_h4 , struct timeval *p_elapse )
+{
+	uint64_t	n4 ;
+	
+	int		nret = 0 ;
+	
+	nret = RFSReceiveData( sock , (char*) & n4 , sizeof(uint32_t) , NULL , p_elapse );
+	if( nret )
+		return nret;
+	
+	(*p_h4) = be64toh( n4 ) ;
 	
 	return 0;
 }
@@ -173,13 +196,55 @@ int RFSReceiveString( int sock , char *buf , uint64_t data_len , struct timeval 
 	return RFSReceiveData( sock , buf , data_len , NULL , p_elapse );
 }
 
-int RFSSendL2VString( int sock , char *buf , int data_len , struct timeval *p_elapse )
+int RFSSendL1VString( int sock , char *buf , struct timeval *p_elapse )
+{
+	uint8_t		c1 ;
+	
+	int		nret = 0 ;
+	
+	c1 = 1 ;
+	
+	nret = RFSSendData( sock , (char*) & c1 , sizeof(uint8_t) , NULL , p_elapse ) ;
+	if( nret )
+		return nret;
+	
+	if( c1 > 0 )
+	{
+		nret = RFSSendData( sock , buf , c1 , NULL , p_elapse ) ;
+		if( nret )
+			return nret;
+	}
+	
+	return 0;
+}
+
+int RFSReceiveL1VString( int sock , char *buf , struct timeval *p_elapse )
+{
+	uint8_t		c1 ;
+	
+	int		nret = 0 ;
+	
+	nret = RFSReceiveData( sock , (char*) & c1 , sizeof(uint8_t) , NULL , p_elapse ) ;
+	if( nret )
+		return nret;
+	
+	if( c1 > 0 )
+	{
+		nret = RFSReceiveData( sock , buf , c1 , NULL , p_elapse ) ;
+		if( nret )
+			return nret;
+	}
+	
+	return 0;
+}
+
+int RFSSendL2VString( int sock , char *buf , uint16_t data_len , struct timeval *p_elapse )
 {
 	uint16_t	n2 ;
 	
 	int		nret = 0 ;
 	
-	n2 = htons((uint16_t)data_len) ;
+	n2 = htons(data_len) ;
 	
 	nret = RFSSendData( sock , (char*) & n2 , sizeof(uint16_t) , NULL , p_elapse ) ;
 	if( nret )
@@ -187,7 +252,7 @@ int RFSSendL2VString( int sock , char *buf , int data_len , struct timeval *p_el
 	
 	if( data_len > 0 )
 	{
-		nret = RFSSendData( sock , buf , data_len , NULL , p_elapse ) ;
+		nret = RFSSendData( sock , buf , (uint64_t)data_len , NULL , p_elapse ) ;
 		if( nret )
 			return nret;
 	}
@@ -195,10 +260,10 @@ int RFSSendL2VString( int sock , char *buf , int data_len , struct timeval *p_el
 	return 0;
 }
 
-int RFSReceiveL2VString( int sock , char *buf , int *p_data_len , struct timeval *p_elapse )
+int RFSReceiveL2VString( int sock , char *buf , uint16_t *p_data_len , struct timeval *p_elapse )
 {
 	uint16_t	n2 ;
-	uint16_t	data_len ;
+	uint16_t	h2 ;
 	
 	int		nret = 0 ;
 	
@@ -206,28 +271,28 @@ int RFSReceiveL2VString( int sock , char *buf , int *p_data_len , struct timeval
 	if( nret )
 		return nret;
 	
-	data_len = (int)ntohs( n2 ) ;
+	h2 = (int)ntohs( n2 ) ;
 	
-	if( data_len > 0 )
+	if( h2 > 0 )
 	{
-		nret = RFSReceiveData( sock , buf , data_len , NULL , p_elapse ) ;
+		nret = RFSReceiveData( sock , buf , h2 , NULL , p_elapse ) ;
 		if( nret )
 			return nret;
 	}
 	
 	if( p_data_len )
-		(*p_data_len) = data_len ;
+		(*p_data_len) = h2 ;
 	
 	return 0;
 }
 
-int RFSSendL4VString( int sock , char *buf , int data_len , struct timeval *p_elapse )
+int RFSSendL4VString( int sock , char *buf , uint32_t data_len , struct timeval *p_elapse )
 {
 	uint32_t	n4 ;
 	
 	int		nret = 0 ;
 	
-	n4 = htonl((uint32_t)data_len) ;
+	n4 = htonl(data_len) ;
 	
 	nret = RFSSendData( sock , (char*) & n4 , sizeof(uint32_t) , NULL , p_elapse ) ;
 	if( nret )
@@ -235,7 +300,7 @@ int RFSSendL4VString( int sock , char *buf , int data_len , struct timeval *p_el
 	
 	if( data_len > 0 )
 	{
-		nret = RFSSendData( sock , buf , data_len , NULL , p_elapse ) ;
+		nret = RFSSendData( sock , buf , (uint64_t)data_len , NULL , p_elapse ) ;
 		if( nret )
 			return nret;
 	}
@@ -243,10 +308,10 @@ int RFSSendL4VString( int sock , char *buf , int data_len , struct timeval *p_el
 	return 0;
 }
 
-int RFSReceiveL4VString( int sock , char *buf , int *p_data_len , struct timeval *p_elapse )
+int RFSReceiveL4VString( int sock , char *buf , uint32_t *p_data_len , struct timeval *p_elapse )
 {
 	uint32_t	n4 ;
-	uint32_t	data_len ;
+	uint32_t	h4 ;
 	
 	int		nret = 0 ;
 	
@@ -254,16 +319,16 @@ int RFSReceiveL4VString( int sock , char *buf , int *p_data_len , struct timeval
 	if( nret )
 		return nret;
 	
-	data_len = (int)ntohl( n4 ) ;
-	if( data_len > 0 )
+	h4 = ntohl( n4 ) ;
+	if( h4 > 0 )
 	{
-		nret = RFSReceiveData( sock , buf , data_len , NULL , p_elapse ) ;
+		nret = RFSReceiveData( sock , buf , h4 , NULL , p_elapse ) ;
 		if( nret )
 			return nret;
 	}
 	
 	if( p_data_len )
-		(*p_data_len) = data_len ;
+		(*p_data_len) = (uint32_t)h4 ;
 	
 	return 0;
 }
@@ -271,7 +336,7 @@ int RFSReceiveL4VString( int sock , char *buf , int *p_data_len , struct timeval
 static __thread char		*sg_buf = NULL ;
 static __thread uint32_t	sg_buf_size = 0 ;
 
-int RFSReceiveL4VString_DUP( int sock , char **sg_buf_ptr , int *p_data_len , struct timeval *p_elapse )
+int RFSReceiveL4VString_DUP( int sock , char **sg_buf_ptr , uint32_t *p_data_len , struct timeval *p_elapse )
 {
 	uint32_t	n4 ;
 	uint32_t	data_len ;
@@ -282,7 +347,7 @@ int RFSReceiveL4VString_DUP( int sock , char **sg_buf_ptr , int *p_data_len , st
 	if( nret )
 		return nret;
 	
-	data_len = (int)ntohl( n4 ) ;
+	data_len = ntohl( n4 ) ;
 	if( data_len > 0 )
 	{
 		if( sg_buf == NULL )
