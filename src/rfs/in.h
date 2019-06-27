@@ -57,7 +57,7 @@ int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock );
 RESPONSE : |fd:INT4|errno:INT4|
 
  COMMAND : ropen3
- VERSION : 3
+ VERSION : 1
  REQUEST : |"open3":STRING8|'1':CHAR|pathfilename:L2VSTR|flags:INT4|mode:INT4|
 RESPONSE : |fd:INT4|errno:INT4|
 
@@ -118,11 +118,16 @@ RESPONSE : |ret:INT4|errno:INT4|
  COMMAND : rfgetc
  VERSION : 1
  REQUEST : |"fread":STRING8|'1':CHAR|fp:INT8|
-RESPONSE : |s:INT4|errno:INT4|
+RESPONSE : |c:INT4|errno:INT4|
 
  COMMAND : rfputc
  VERSION : 1
- REQUEST : |"fwrite":STRING8|'1':CHAR|s:INT4|fp:INT8|
+ REQUEST : |"fwrite":STRING8|'1':CHAR|c:INT4|fp:INT8|
+RESPONSE : |ret:INT4|errno:INT4|
+
+ COMMAND : rfeof
+ VERSION : 1
+ REQUEST : |"fclose":STRING8|'1':CHAR|fp:INT8|
 RESPONSE : |ret:INT4|errno:INT4|
 */
 
@@ -137,6 +142,8 @@ int rfs_fputs( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFp
 
 int rfs_fgetc( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse );
 int rfs_fputc( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse );
+
+int rfs_feof( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse );
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,8 @@
 #include "in.h"
 
+static __thread char		*sg_buf = NULL ;
+static __thread uint32_t	sg_buf_size = 0 ;
+
 LINK_RBTREENODE_INT( LinkLocalFdsTreeNodeByLocalFd , struct LocalFds , local_fds_rbtree_order_by_local_fd , struct LocalFd , local_fd_rbnode_by_order_by_local_fd , local_fd )
 QUERY_RBTREENODE_INT( QueryLocalFdsTreeNodeByLocalFd , struct LocalFds , local_fds_rbtree_order_by_local_fd , struct LocalFd , local_fd_rbnode_by_order_by_local_fd , local_fd )
 UNLINK_RBTREENODE( UnlinkLocalFdsTreeNodeByLocalFd , struct LocalFds , local_fds_rbtree_order_by_local_fd , struct LocalFd , local_fd_rbnode_by_order_by_local_fd )
@@ -284,9 +287,6 @@ int rfs_close( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFp
 	return 0;
 }
 
-static __thread char		*sg_buf = NULL ;
-static __thread uint32_t	sg_buf_size = 0 ;
-
 int rfs_read( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
 {
 	uint32_t	file_fd ;
@@ -482,106 +482,6 @@ int rfs_write( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFp
 	return 0;
 }
 
-#if 0
-int reof( int accepted_sock , struct LocalFds *p_local_fds , struct timeval *p_elapse )
-{
-	int		file_fd ;
-	
-	struct LocalFd	local_fd ;
-	struct LocalFd	*p_local_fd = NULL ;
-	struct stat	stat ;
-	off_t		offset ;
-	
-	int		ret ;
-	
-	int		nret = 0 ;
-	
-	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
-	
-	nret = RFSReceiveInt4( accepted_sock , & file_fd , p_elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSReceiveInt4 flags failed[%d]" , nret )
-		return nret;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSReceiveInt4 flags[%d] ok" , file_fd )
-	}
-	
-	memset( & local_fd , 0x00 , sizeof(struct LocalFd) );
-	local_fd.local_fd = file_fd ;
-	p_local_fd = QueryLocalFdsTreeNodeByLocalFd( p_local_fds , & local_fd ) ;
-	if( p_local_fd == NULL )
-	{
-		ERRORLOGC( "file_fd[%d] is not opened" , file_fd )
-		ret = -1 ;
-		errno = EINVAL ;
-	}
-	else
-	{
-		INFOLOGC( "call eof[%d] ..." , file_fd )
-		
-		memset( & stat , 0x00 , sizeof(struct stat) );
-		ret = fstat( file_fd , & stat ) ;
-		if( ret == -1 )
-		{
-			ERRORLOGC( "call fstat[%d] failed[%d] , errno[%d]" , file_fd , ret , errno )
-		}
-		else
-		{
-			INFOLOGC( "call fstat[%d] ok" , file_fd )
-			
-			offset = (int)lseek( file_fd , 0 , SEEK_CUR ) ;
-			if( offset == -1 )
-			{
-				ERRORLOGC( "call lseek[%d] failed[%d] , errno[%d]" , file_fd , offset , errno )
-				ret = offset ;
-			}
-			else
-			{
-				INFOLOGC( "call lseek[%d] ok" , file_fd )
-				
-				if( ret == stat.st_size )
-					ret = 1 ;
-				else
-					ret = 0 ;
-			}
-		}
-	}
-	
-	nret = RFSSendInt4( accepted_sock , ret , p_elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendInt4 ret[%d] failed[%d]" , ret , nret )
-		return nret;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSSendInt4 ret[%d] ok" , ret )
-	}
-	
-	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
-	if( nret )
-	{
-		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
-		return nret;
-	}
-	else
-	{
-		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
-	}
-	
-	if( p_local_fd )
-	{
-		UnlinkLocalFdsTreeNodeByLocalFd( p_local_fds , p_local_fd );
-		free( p_local_fd );
-	}
-	
-	return 0;
-}
-#endif
-
 int rfs_fopen( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
 {
 	char		pathfilename[ (1<<16) + 1 ] ;
@@ -718,6 +618,674 @@ int rfs_fclose( int accepted_sock , struct LocalFds *p_local_fds , struct LocalF
 		else
 		{
 			INFOLOGC( "call fclose[%d] ok" , file_fp )
+		}
+	}
+	
+	nret = RFSSendInt4( accepted_sock , ret , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 ret[%d] failed[%d]" , ret , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 ret[%d] ok" , ret )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	if( p_local_fp )
+	{
+		UnlinkLocalFpsTreeNodeByLocalFp( p_local_fps , p_local_fp );
+		free( p_local_fp );
+	}
+	
+	return 0;
+}
+
+int rfs_fread( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	uint32_t	size ;
+	uint32_t	nmemb ;
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	size_t		read_len ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveInt4( accepted_sock , & size , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 size failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt4 size[%d] ok" , size )
+	}
+	
+	nret = RFSReceiveInt4( accepted_sock , & nmemb , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 nmemb failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt4 nmemb[%d] ok" , nmemb )
+	}
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%p] is not opened" , file_fp )
+		read_len = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		uint32_t	total_size = size * nmemb ;
+		
+		if( sg_buf == NULL )
+		{
+			sg_buf = (char*)malloc( total_size+1 ) ;
+			if( sg_buf == NULL )
+				return RFS_ERROR_ALLOC;
+			sg_buf_size = total_size+1 ;
+		}
+		else if( sg_buf_size < total_size+1 )
+		{
+			char	*tmp = NULL ;
+			
+			tmp = (char*)realloc( sg_buf , total_size+1 ) ;
+			if( tmp == NULL )
+				return RFS_ERROR_ALLOC;
+			sg_buf = tmp ;
+			sg_buf_size = total_size+1 ;
+		}
+		
+		INFOLOGC( "call fread[%p][%d][%d][%p] ..." , sg_buf , size , nmemb , file_fp )
+		read_len = fread( sg_buf , size , nmemb , file_fp ) ;
+		if( read_len == -1 )
+		{
+			ERRORLOGC( "call fread[%p][%d][%d][%p] failed[%d] , errno[%d] , data_len[%d]" , sg_buf , size , nmemb , file_fp , errno , read_len )
+		}
+		else
+		{
+			INFOLOGC( "call fread[%p][%d][%d][%p] ok , data_len[%d]" , sg_buf , size , nmemb , file_fp , read_len )
+		}
+	}
+	
+	nret = RFSSendL4VString( accepted_sock , sg_buf , read_len , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendL4VString read_len[%d] failed[%d]" , read_len , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendL4VString read_len[%d] ok" , read_len )
+		DEBUGHEXLOGC( sg_buf , read_len , "read_len[%d]bytes" , read_len )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	if( sg_buf_size > 10*1024*1024 )
+	{
+		free( sg_buf ); sg_buf = NULL ;
+		sg_buf_size = 0 ;
+	}
+	
+	return 0;
+}
+
+int rfs_fwrite( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	uint32_t	size ;
+	uint32_t	nmemb ;
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	uint32_t	write_len ;
+	uint32_t	wrote_len ;
+	char		*p_buf = NULL ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveL4VString_DUP( accepted_sock , & p_buf , & write_len , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveL4VString_DUP write_len failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveL4VString_DUP write_len[%d] ok" , write_len )
+		DEBUGHEXLOGC( p_buf , write_len , "data_len[%d]bytes" , write_len )
+	}
+	
+	nret = RFSReceiveInt4( accepted_sock , & size , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 size failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt4 size[%d] ok" , size )
+	}
+	
+	nret = RFSReceiveInt4( accepted_sock , & nmemb , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 nmemb failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt4 nmemb[%d] ok" , nmemb )
+	}
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%d] is not opened" , file_fp )
+		wrote_len = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		INFOLOGC( "call fwrite[%d][0x%X][%d] ..." , file_fp , p_buf , write_len )
+		wrote_len = fwrite( p_buf , size , nmemb , file_fp ) ;
+		if( wrote_len == -1 )
+		{
+			ERRORLOGC( "call fwrite[%p][%d][%d][%p] failed[%d] , errno[%d] , write_len[%d]" , p_buf , size , nmemb , file_fp , nret , errno , wrote_len )
+		}
+		else
+		{
+			INFOLOGC( "call fwrite[%p][%d][%d][%p] ok , write_len[%d]" , p_buf , size , nmemb , file_fp , wrote_len )
+		}
+	}
+	
+	nret = RFSSendInt4( accepted_sock , wrote_len , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 wrote[%d] failed[%d]" , wrote_len , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 wrote[%d] ok" , wrote_len )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	return 0;
+}
+
+int rfs_fgets( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	uint32_t	size ;
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	size_t		read_len ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveInt4( accepted_sock , & size , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt4 size failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt4 size[%d] ok" , size )
+	}
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%p] is not opened" , file_fp )
+		read_len = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		char	*p = NULL ;
+		
+		if( sg_buf == NULL )
+		{
+			sg_buf = (char*)malloc( size+1 ) ;
+			if( sg_buf == NULL )
+				return RFS_ERROR_ALLOC;
+			sg_buf_size = size+1 ;
+		}
+		else if( sg_buf_size < size+1 )
+		{
+			char	*tmp = NULL ;
+			
+			tmp = (char*)realloc( sg_buf , size+1 ) ;
+			if( tmp == NULL )
+				return RFS_ERROR_ALLOC;
+			sg_buf = tmp ;
+			sg_buf_size = size+1 ;
+		}
+		
+		INFOLOGC( "call fgets[%p][%d][%p] ..." , sg_buf , size , file_fp )
+		p = fgets( sg_buf , size , file_fp ) ;
+		if( p == NULL )
+		{
+			ERRORLOGC( "call fgets[%p][%d][%p] failed[%d] , errno[%d] , data_len[%d]" , sg_buf , size , file_fp , errno )
+			read_len = -1 ;
+		}
+		else
+		{
+			INFOLOGC( "call fgets[%p][%d][%p] ok , data_len[%d]" , sg_buf , size , file_fp )
+			read_len = strlen(p) ;
+		}
+	}
+	
+	nret = RFSSendL4VString( accepted_sock , sg_buf , read_len , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendL4VString data_len[%d] failed[%d]" , read_len , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendL4VString read_len[%d] ok" , read_len )
+		DEBUGHEXLOGC( sg_buf , read_len , "read_len[%d]bytes" , read_len )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	if( sg_buf_size > 10*1024*1024 )
+	{
+		free( sg_buf ); sg_buf = NULL ;
+		sg_buf_size = 0 ;
+	}
+	
+	return 0;
+}
+
+int rfs_fputs( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	uint32_t	size ;
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	uint32_t	wrote_len ;
+	char		*p_buf = NULL ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveL4VString_DUP( accepted_sock , & p_buf , & size , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveL4VString_DUP total_size failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveL4VString_DUP total_size[%d] ok" , size )
+		DEBUGHEXLOGC( p_buf , size , "total_size[%d]bytes" , size )
+	}
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%d] is not opened" , file_fp )
+		wrote_len = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		INFOLOGC( "call fputs[%p][%p] ..." , file_fp , p_buf , size )
+		wrote_len = fputs( p_buf , file_fp ) ;
+		if( wrote_len == -1 )
+		{
+			ERRORLOGC( "call fputs[%p][%p] failed[%d] , errno[%d]" , p_buf , file_fp , wrote_len , errno )
+		}
+		else
+		{
+			INFOLOGC( "call fputs[%p][%p] ok , write_len[%d]" , p_buf , file_fp , wrote_len )
+		}
+	}
+	
+	nret = RFSSendInt4( accepted_sock , wrote_len , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 wrote[%d] failed[%d]" , wrote_len , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 wrote[%d] ok" , wrote_len )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	return 0;
+}
+int rfs_fgetc( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	int		ch ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%p] is not opened" , file_fp )
+		ch = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		INFOLOGC( "call fgetc[%p] ..." , file_fp )
+		ch = fgetc( file_fp ) ;
+		if( ch == EOF )
+		{
+			ERRORLOGC( "call fgetc[%p] failed[%d] , errno[%d] , data_len[%d]" , file_fp , errno )
+			ch = -1 ;
+		}
+		else
+		{
+			INFOLOGC( "call fgetc[%p] ok , ch[%d][%c]" , file_fp , ch , ch )
+		}
+	}
+	
+	nret = RFSSendInt4( accepted_sock , (uint32_t)ch , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendL4VString data_len[%d] failed[%d]" , 1 , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendL4VString read_len[%d] ok" , 1 )
+		DEBUGHEXLOGC( (char*) & ch , 1 , "read_len[%d]bytes" , 1 )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	return 0;
+}
+
+int rfs_fputc( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	int		ch ;
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	uint32_t	wrote_len ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveInt4( accepted_sock , (uint32_t*) & ch , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveL4VString_DUP ch failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt4 ok" )
+		DEBUGHEXLOGC( (char*) & ch , 1 , "size[%d]bytes" , 1 )
+	}
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%d] is not opened" , file_fp )
+		wrote_len = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		INFOLOGC( "call fputc[%d][%p] ..." , ch , file_fp )
+		wrote_len = fputc( ch , file_fp ) ;
+		if( wrote_len == -1 )
+		{
+			ERRORLOGC( "call fputc[%d][%p] failed[%d] , errno[%d]" , ch , file_fp , wrote_len , errno )
+		}
+		else
+		{
+			INFOLOGC( "call fputc[%d][%p] ok , write_len[%d]" , ch , file_fp , wrote_len )
+		}
+	}
+	
+	nret = RFSSendInt4( accepted_sock , wrote_len , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 wrote[%d] failed[%d]" , wrote_len , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 wrote[%d] ok" , wrote_len )
+	}
+	
+	nret = RFSSendInt4( accepted_sock , errno , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSSendInt4 errno failed[%d]" , errno , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSSendInt4 errno ok" , errno )
+	}
+	
+	return 0;
+}
+
+int rfs_feof( int accepted_sock , struct LocalFds *p_local_fds , struct LocalFps *p_local_fps , struct timeval *p_elapse )
+{
+	FILE		*file_fp = NULL ;
+	
+	struct LocalFp	local_fp ;
+	struct LocalFp	*p_local_fp = NULL ;
+	
+	int		ret ;
+	
+	int		nret = 0 ;
+	
+	SECONDS_TO_TIMEVAL( 60 , (*p_elapse) )
+	
+	nret = RFSReceiveInt8( accepted_sock , (uint64_t*) & file_fp , p_elapse ) ;
+	if( nret )
+	{
+		ERRORLOGC( "RFSReceiveInt8 file_fp failed[%d]" , nret )
+		return nret;
+	}
+	else
+	{
+		DEBUGLOGC( "RFSReceiveInt8 file_fp[%p] ok" , file_fp )
+	}
+	
+	memset( & local_fp , 0x00 , sizeof(struct LocalFp) );
+	local_fp.local_fp = file_fp ;
+	p_local_fp = QueryLocalFpsTreeNodeByLocalFp( p_local_fps , & local_fp ) ;
+	if( p_local_fp == NULL )
+	{
+		ERRORLOGC( "file_fp[%p] is not opened" , file_fp )
+		ret = -1 ;
+		errno = EINVAL ;
+	}
+	else
+	{
+		INFOLOGC( "call feof[%p] ..." , file_fp )
+		ret = feof( file_fp ) ;
+		if( ret == -1 )
+		{
+			ERRORLOGC( "call feof[%p] failed[%d] , errno[%d]" , file_fp , ret , errno )
+		}
+		else
+		{
+			INFOLOGC( "call feof[%d] ok" , file_fp )
 		}
 	}
 	

@@ -93,7 +93,6 @@ int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock )
 			if( nret )
 				break;
 		}
-#if 0
 		else if( STRCMP( command , == , "fread" ) && version == '1' )
 		{
 			nret = rfs_fread( accepted_sock , & local_fds , & local_fps , & elapse ) ;
@@ -130,7 +129,12 @@ int comm( rfs_conf *p_rfs_conf , int process_index , int accepted_sock )
 			if( nret )
 				break;
 		}
-#endif
+		else if( STRCMP( command , == , "feof" ) && version == '1' )
+		{
+			nret = rfs_feof( accepted_sock , & local_fds , & local_fps , & elapse ) ;
+			if( nret )
+				break;
+		}
 		else
 		{
 			ERRORLOGC( "unknow COMMAND[%s] and VERSION[%c]" , command , version )

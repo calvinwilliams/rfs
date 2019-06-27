@@ -31,6 +31,13 @@ int rfclose( FILE *rfp );
 
 size_t rfread( void *ptr , size_t size , size_t nmemb , FILE *rfp );
 size_t rfwrite( void *ptr , size_t size , size_t nmemb , FILE *rfp );
+
+char *rfgets( char *s , int size , FILE *fp );
+int rfputs( char *s , FILE *fp );
+
+int rfgetc( FILE *fp );
+int rfputc( int c , FILE *fp );
+
 int rfeof( FILE *rfp );
 
 #ifdef __cplusplus
